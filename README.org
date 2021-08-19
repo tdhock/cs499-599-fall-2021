@@ -1,0 +1,191 @@
+Computer Science 499/599 at Northern Arizona University, Fall 2021
+
+Topic: Unsupervised Learning
+
+Dates: Aug 23 - Dec 10.
+
+Meeting time/place: 
+- CS499, MWF 8-8:50AM, Engineering building, room 314.
+- CS599, TuTh 8-9:15AM, Health Professions building, room 229.
+
+Syllabus: [[https://docs.google.com/document/d/1HOQYWLvwsGBVijQxvXKxf8aDREeLgklCsN9L1M8bHuQ/edit?usp=sharing][Google Doc]].
+
+Please use [[https://forms.gle/NzaR9ANXhcojRnxA6][this Google Form]] for feedback after every class.
+
+** Textbooks
+   
+MLAPP by Murphy
+- Author's web page https://www.cs.ubc.ca/~murphyk/MLbook/
+- [[https://arizona-nau.userservices.exlibrisgroup.com/view/action/uresolver.do;jsessionid=44D57625A91B64FED37B94B305F9F939.app03.na03.prod.alma.dc04.hosted.exlibrisgroup.com:1801?operation=resolveService&package_service_id=20483326390003842&institutionId=3842&customerId=3840][full
+  book online describing many machine learning algorithms from a
+  computer science perspective]].
+
+ESL by Hastie, Tibshirani, Friedman
+- Free PDF available from author's web page
+  https://web.stanford.edu/~hastie/ElemStatLearn/ describes many
+  machine learning algorithms from a statistics perspective.
+
+Getting Started in R: Tinyverse Edition by Saghir Bashir and Dirk
+Eddelbuettel.
+- [[https://eddelbuettel.github.io/gsir-te/Getting-Started-in-R.pdf][PDF]].
+- [[https://github.com/eddelbuettel/gsir-te][source code]].
+
+Impatient R by Burns
+- [[https://www.burns-stat.com/documents/tutorials/impatient-r/][web pages with practical R tutorials]].
+
+Tao Te Programming by Burns
+- [[file:Burns.org][selected chapters]] from the book about how to become a good
+  programmmer.
+- [[https://www.burns-stat.com/documents/books/tao-te-programming/][web page with details about how to purchase the full book]].
+
+** Videos / Readings / Code demos
+
+[[https://drive.google.com/drive/folders/1PeTZJ29HRTM6BrsHTSHAdDfwZit8yA-P?usp=sharing][Folder of all class recordings from last year on google drive]].
+
+[[file:demos/][Folder of all code demos from class]].
+
+- Weds Aug 12: introductory [[file:2020-08-12-applications/slides.pdf][slides]].
+- Fri Aug 14: [[https://www.youtube.com/watch?v=SRdzg-gzKXs&list=PLwc48KSH3D1M78ilQi35KPe2GHa7B_Rme&index=2&t=0s][video to watch before class]], reading CSV,
+  str, help, subset, conversion.
+- Mon Aug 17: [[https://uc-r.github.io/ggplot_intro][ggplot intro (read before class)]].
+- Wed Aug 19: [[https://r4ds.had.co.nz/data-visualisation.html][Data visualization chapter of R for Data Science
+  (read before class)]].
+- Fri Aug 21: [[http://members.cbio.mines-paristech.fr/~thocking/animint2-manual/Ch02-ggplot2.html][Grammar of graphics chapter of Animint2 Manual (read
+  before class)]].
+- Mon Aug 24: Reading.
+  - Introduction to clustering, MLAPP 25.1
+  - Clustering evaluation, MLAPP-25.1.2
+- Weds Aug 26: K-means is discussed in ESL-14.3.6, MLAPP-11.4.2.5
+- Fri Aug 28: Gaussian mixtures are discussed in ESL-14.3.7,
+  MLAPP-11.4.2. [[file:mclust-models.jpg][mclust model names figure]]
+- Mon Aug 31: Hierarchical clustering ESL-14.3.12
+- Weds Sep 2: Same ESL as Monday.
+- Fri Sep 4: MLAPP-25.5.1, [[file:2020-09-01-COVID-studenttips-faculty.pptx][COVID19 announcement slide]].
+- Mon Sep 7: LABOR DAY (NO CLASS) but reading/quiz on Spectral
+  Clustering, ESL-14.5.3
+- Weds Sep 9: MLAPP-25.4
+- Fri Sep 11: same.
+- Mon Sep 14: Estimating the number of clusters, ESL-14.3.11
+- Weds Sep 16: Model selection for latent variable models, MLAPP-11.5
+- Fri Sep 18: same.
+- Mon Sep 21: Dirichlet and Chinese Restaurant Process MLAPP-25.2
+- Weds Sep 23: [[https://cloud.r-project.org/web/packages/dirichletprocess/vignettes/dirichletprocess.pdf][R package dirichletprocess vignette]], [[file:2020-09-25-dirichlet-process/][Murphy
+  figures/text]].
+- Fri Sep 25: Same as Weds. Optional reading:
+  [[http://www.cs.columbia.edu/~blei/papers/Blei2012.pdf][Comm ACM Intro to Topic Models]] (Blei LDA), [[https://cran.r-project.org/web/packages/topicmodels/vignettes/topicmodels.pdf][R package topicmodels vignette]].
+- Mon Sep 28: [[file:exams/mid-term.org][Practice mid-term exam]].
+- Weds Sep 30: Solutions to practice mid-term exam.
+- Fri Oct 2: Real mid-term exam.
+- Mon Oct 5: Intro to changepoint detection [[https://arxiv.org/pdf/1801.00718.pdf][Truong et al]] sections 1-2.
+- Weds Oct 7: Binary segmentation. [[https://arxiv.org/pdf/1801.00718.pdf][Truong et al]] 5.2.2
+- Fri Oct 9: Estimating the number of changes.  [[https://arxiv.org/pdf/1801.00718.pdf][Truong et al]]
+  section 6.
+- Mon Oct 12: Optimal detection, [[https://arxiv.org/pdf/1801.00718.pdf][Truong et al]] 5.1. [[file:2020-10-12-dynamic-programming-slides.pdf][Dynamic programming
+  slides PDF]].
+- Weds Oct 14: Models and cost functions, [[https://arxiv.org/pdf/1801.00718.pdf][Truong et al]] section 4.
+- Fri Oct 16: same.
+- Mon Oct 19: [[file:depmixS4.pdf][depmixS4 vignette]] section 2.
+- Weds Oct 21: Markov Models, MLAPP-17.2.
+- Fri Oct 23: Hidden Markov Models, MLAPP-17.3-5.
+- Mon Oct 26: same.
+- Weds Oct 28: Learning for HMMs, MLAPP-17.5.
+- Fri Oct 30: AIC/BIC, MLAPP-5.3.2.4, ESL-7.5. [[http://members.cbio.mines-paristech.fr/~thocking/figure-max-auc/][Changepoint ROC curve
+  interactive data viz]].
+- Mon Nov 2: Principal Components Analysis, ESL-14.5.
+- Weds Nov 4: same.
+- Fri Nov 6: MLAPP-12.2.
+- Mon Nov 9: Deep generative models, MLAPP-28.2 to 28.3.
+- Weds Nov 11: Deep auto-encoders, MLAPP-28.3.2.
+- Fri Nov 13: MLAPP-28.4.2 to 28.4.3.
+- Weds Nov 18: [[file:exams/final.org][practice final exam]]
+- Fri Nov 20: real final exam, 7:30-9:30.
+
+** Homeworks
+
+To do the homeworks you need to install [[https://cloud.r-project.org/][the most recent version of R]]
+(4.0.2) with either the [[https://rstudio.com/products/rstudio/download/][RStudio]] IDE (for beginners) or the [[http://ess.r-project.org/][ESS]] IDE
+(for students who already know/use emacs, or who want to learn, [[https://www.youtube.com/playlist?list=PLwc48KSH3D1Onsed66FPLywMSIQmAhUYJ][my
+emacs tutorials]]).
+
+UPDATE Thurs Sept 10: [[https://docs.google.com/document/d/1W6-HdQLgHayOFXaQtscO5J5yf05G7E6KeXyiBJFcT7A/edit?usp=sharing][This General Usage Rubric]] will be used to grade the code
+quality/style/efficiency in each of your homeworks. 
+
+- [[file:homeworks/1.org][1: installing R and reading CSV]] Due Fri Aug 14, 11:59PM.
+- [[file:homeworks/2.org][2: data visualization using ggplot2]] Due Fri Aug 21, 11:59PM.
+- [[file:homeworks/3.org][3: K-means and mixture models]] Due Fri Aug 28, 11:59PM.
+- [[file:homeworks/4.org][4: Hierarchical clustering]] Due Fri Sep 4, 11:59PM.
+- [[file:homeworks/5.org][5: Spectral Clustering]] Due Fri Sep 11, 11:59PM.
+- [[file:homeworks/6.org][6: Model selection]] Due Fri Sep 18, 11:59PM.
+- [[file:homeworks/7.org][7: Dirichlet and Chinese Restaurant Process]] Due Fri Sep 25, 11:59PM.
+- [[file:homeworks/Rpkg.org][Grad student R package coding project]] Due Sun Oct 4, 11:59PM.
+- [[file:homeworks/8.org][8: Binary segmentation]] Due Fri Oct 9, 11:59PM.
+- [[file:homeworks/9.org][9: Optimal segmentation]] Due Fri Oct 16, 11:59PM.
+- [[file:homeworks/10.org][10: Hidden Markov Models]] Due Fri Oct 23, 11:59PM. 
+- [[file:homeworks/11.org][11: Segmentation model selection and evaluation]] Due Fri Oct 30, 11:59PM.
+- [[file:homeworks/12.org][12: Principal Components Analysis]] Fri Nov 6, 11:59PM.
+- [[file:homeworks/13.org][13: auto-encoders]] Due Weds Nov 18, 11:59PM.
+- 14: CANCELLED 
+- [[file:homeworks/Rpkg.org][Grad student R package coding project]] Due Fri Nov 27, 11:59PM.
+
+General Questions and Answers
+- can I do my homework with an older version of R? Maybe, try it if
+  you want, but homeworks will typically require using R packages,
+  which are only tested with the most recent versions of R, so if you
+  are getting errors with an old version of R, try upgrading to the
+  most recent version.
+
+** How to ace this class
+
+Before class you should prepare by doing the suggested
+readings/videos. When you do that, write a summary in your own words
+of every section. Also write questions that you have during your
+reading so you can ask in class or office hours.
+
+During class, take notes by writing what you understood in your own
+words. Also I would suggest to ask questions in class as soon as you
+need clarification.
+
+After class, you should review your notes with one of your classmates
+(ask one of the students who seem to be correctly answering a lot of
+questions). Ask each other questions and try to teach/summarize some
+of the material with each other -- that is one of the best ways to
+learn.
+
+Finally after doing all of the above, please come to office hours (see
+syllabus), or email me to schedule a meeting.
+
+** Student in-person class assignment 
+
+*** All virtual/remote
+
+Stenberg	Alyssa
+Shaffer	Isaac
+Cao	Kehan
+
+*** Monday	
+
+Donnelly	Brian
+Keefe	Chris
+Ray	Brigham
+Wan	Hui
+Drake	Daniel
+Kruse	Joshua
+
+*** Wednesday	
+
+Rovira-Sugranes	Arnau
+Kethireddy	Sambashiva Reddy
+Hillman	Jonathan
+Su	Weiheng
+Couey	Benjamin
+Rao	Jun
+Messenger	Zachary
+Ghanaimiandoab	Dina
+Peterson	Benjamin
+Nemeth	Thomas
+Bolyen	Evan
+
+*** friday 
+
+everyone remote/zoom.
+

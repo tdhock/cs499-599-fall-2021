@@ -68,10 +68,9 @@ Homework topics and readings for each week are listed below. The date
 of the Monday of each week is written. Each homework is due Friday of
 that week, 11:59PM.
 
-- Aug 23, Homework 1: installing R, reading CSV, data visualization using ggplot2.
-  - introductory [[file:2020-08-12-applications/slides.pdf][slides]], [[https://www.youtube.com/watch?v=SRdzg-gzKXs&list=PLwc48KSH3D1M78ilQi35KPe2GHa7B_Rme&index=2&t=0s][video to watch before class]], [[https://uc-r.github.io/ggplot_intro][ggplot intro]],
-    [[https://r4ds.had.co.nz/data-visualisation.html][Data visualization chapter of R for Data Science]], [[http://members.cbio.mines-paristech.fr/~thocking/animint2-manual/Ch02-ggplot2.html][Grammar of
-    graphics chapter of Animint2 Manual]].
+- Aug 23, [[file:homeworks/1.org][Homework 1]]: installing R, reading CSV, data visualization using ggplot2.
+  - introductory [[file:2021-08-23-applications/slides.pdf][slides]], [[https://www.youtube.com/watch?v=SRdzg-gzKXs&list=PLwc48KSH3D1M78ilQi35KPe2GHa7B_Rme&index=2&t=0s][intro to R video]], [[https://uc-r.github.io/ggplot_intro][ggplot intro]],
+    [[https://r4ds.had.co.nz/data-visualisation.html][Data visualization chapter of R for Data Science]], [[http://members.cbio.mines-paristech.fr/~thocking/animint2-manual/Ch02-ggplot2.html][Grammar of graphics chapter of Animint2 Manual]].
 - Aug 30, Homework 2: K-means.
   - Introduction to clustering, MLAPP 25.1. Clustering evaluation,
     MLAPP-25.1.2. K-means is discussed in ESL-14.3.6, MLAPP-11.4.2.5.

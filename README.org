@@ -10,8 +10,6 @@ Meeting time/place:
 
 Syllabus: [[https://docs.google.com/document/d/1HOQYWLvwsGBVijQxvXKxf8aDREeLgklCsN9L1M8bHuQ/edit?usp=sharing][Google Doc]].
 
-Please use [[https://forms.gle/NzaR9ANXhcojRnxA6][this Google Form]] for feedback after every class.
-
 ** Reading links
 
 *** For quizzes 

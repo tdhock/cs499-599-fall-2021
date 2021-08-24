@@ -41,11 +41,10 @@ Eddelbuettel.
 - [[https://github.com/eddelbuettel/gsir-te][source code]].
 
 Tao Te Programming by Burns
-- [[file:Burns.org][selected chapters]] from the book about how to become a good
-  programmmer.
+- [[https://github.com/tdhock/cs499-599-fall-2020/blob/main/Burns.org][selected chapters]] from the book about how to become a good programmmer.
 - [[https://www.burns-stat.com/documents/books/tao-te-programming/][web page with details about how to purchase the full book]].
 
-** Homeworks and reading
+** Weekly schedule of Homeworks and reading
 
 To do the homeworks you need to install [[https://cloud.r-project.org/][the most recent version of R]]
 (4.1.1) with either the [[https://rstudio.com/products/rstudio/download/][RStudio]] IDE (for beginners) or the [[http://ess.r-project.org/][ESS]] IDE

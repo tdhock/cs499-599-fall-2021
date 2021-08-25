@@ -84,8 +84,7 @@ that week, 11:59PM.
 - Sept 27, Review and exam
 - Oct 4, Homework 6: Binary segmentation
   - Intro to changepoint detection [[https://arxiv.org/pdf/1801.00718.pdf][Truong et al]]. sections 1-2. Binary
-    segmentation. Section 5.2.2. Estimating the number of changes.
-  section 6.
+    segmentation. Section 5.2.2. Estimating the number of changes. section 6.
 - Oct 11, Homework 7: Optimal segmentation
   - Optimal detection, [[https://arxiv.org/pdf/1801.00718.pdf][Truong et al]] 5.1. [[file:2020-10-12-dynamic-programming-slides.pdf][Dynamic programming slides
     PDF]]. Models and cost functions, [[https://arxiv.org/pdf/1801.00718.pdf][Truong et al]] section 4.

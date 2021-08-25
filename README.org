@@ -67,7 +67,7 @@ that week, 11:59PM.
 
 - Aug 23, [[file:homeworks/1.org][Homework 1]]: installing R, reading CSV, data visualization using ggplot2.
   - introductory [[file:2021-08-23-applications/slides.pdf][slides]], [[https://www.youtube.com/watch?v=SRdzg-gzKXs&list=PLwc48KSH3D1M78ilQi35KPe2GHa7B_Rme&index=2&t=0s][intro to R video]], [[https://uc-r.github.io/ggplot_intro][ggplot intro]],
-    [[https://r4ds.had.co.nz/data-visualisation.html][Data visualization chapter of R for Data Science]], [[http://members.cbio.mines-paristech.fr/~thocking/animint2-manual/Ch02-ggplot2.html][Grammar of graphics chapter of Animint2 Manual]].
+    [[https://r4ds.had.co.nz/data-visualisation.html][Data visualization chapter of R for Data Science]], [[https://rcdata.nau.edu/genomic-ml/animint2-manual/Ch02-ggplot2.html][Grammar of graphics chapter of Animint2 Manual]].
   - Quizzes Due Tues Aug 24: R Basics 1, R ggplot 1. Due Thurs Aug 26:
     R ggplot 2, R ggplot 3.
 - Aug 30, Homework 2: K-means.

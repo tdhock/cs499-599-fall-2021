@@ -8,7 +8,7 @@ Meeting time/place:
 - CS499, MWF 8-8:50AM, Engineering building, room 314.
 - CS599, TuTh 8-9:15AM, Health Professions building, room 229.
 
-Syllabus: [[https://docs.google.com/document/d/1HOQYWLvwsGBVijQxvXKxf8aDREeLgklCsN9L1M8bHuQ/edit?usp=sharing][Google Doc]].
+Syllabus: [[https://docs.google.com/document/d/1yhLOga-9vuuNin_LK3z7TO3h-i5QxFoWqYte5A9KyZI/edit?usp=sharing][Google Doc]].
  
 ** Reading links
 
@@ -41,11 +41,10 @@ Eddelbuettel.
 - [[https://github.com/eddelbuettel/gsir-te][source code]].
 
 Tao Te Programming by Burns
-- [[file:Burns.org][selected chapters]] from the book about how to become a good
-  programmmer.
+- [[https://github.com/tdhock/cs499-599-fall-2020/blob/master/Burns.org][selected chapters]] from the book about how to become a good programmmer.
 - [[https://www.burns-stat.com/documents/books/tao-te-programming/][web page with details about how to purchase the full book]].
 
-** Homeworks and reading
+** Weekly schedule of Homeworks and reading
 
 To do the homeworks you need to install [[https://cloud.r-project.org/][the most recent version of R]]
 (4.1.1) with either the [[https://rstudio.com/products/rstudio/download/][RStudio]] IDE (for beginners) or the [[http://ess.r-project.org/][ESS]] IDE
@@ -68,7 +67,7 @@ that week, 11:59PM.
 
 - Aug 23, [[file:homeworks/1.org][Homework 1]]: installing R, reading CSV, data visualization using ggplot2.
   - introductory [[file:2021-08-23-applications/slides.pdf][slides]], [[https://www.youtube.com/watch?v=SRdzg-gzKXs&list=PLwc48KSH3D1M78ilQi35KPe2GHa7B_Rme&index=2&t=0s][intro to R video]], [[https://uc-r.github.io/ggplot_intro][ggplot intro]],
-    [[https://r4ds.had.co.nz/data-visualisation.html][Data visualization chapter of R for Data Science]], [[http://members.cbio.mines-paristech.fr/~thocking/animint2-manual/Ch02-ggplot2.html][Grammar of graphics chapter of Animint2 Manual]].
+    [[https://r4ds.had.co.nz/data-visualisation.html][Data visualization chapter of R for Data Science]], [[https://rcdata.nau.edu/genomic-ml/animint2-manual/Ch02-ggplot2.html][Grammar of graphics chapter of Animint2 Manual]].
   - Quizzes Due Tues Aug 24: R Basics 1, R ggplot 1. Due Thurs Aug 26:
     R ggplot 2, R ggplot 3.
 - Aug 30, Homework 2: K-means.
@@ -85,8 +84,7 @@ that week, 11:59PM.
 - Sept 27, Review and exam
 - Oct 4, Homework 6: Binary segmentation
   - Intro to changepoint detection [[https://arxiv.org/pdf/1801.00718.pdf][Truong et al]]. sections 1-2. Binary
-    segmentation. Section 5.2.2. Estimating the number of changes.
-  section 6.
+    segmentation. Section 5.2.2. Estimating the number of changes. section 6.
 - Oct 11, Homework 7: Optimal segmentation
   - Optimal detection, [[https://arxiv.org/pdf/1801.00718.pdf][Truong et al]] 5.1. [[file:2020-10-12-dynamic-programming-slides.pdf][Dynamic programming slides
     PDF]]. Models and cost functions, [[https://arxiv.org/pdf/1801.00718.pdf][Truong et al]] section 4.

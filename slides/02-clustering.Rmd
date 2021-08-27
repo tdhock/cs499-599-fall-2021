@@ -1,0 +1,83 @@
+---
+title: "Clustering and k-means"
+author: "Toby Dylan Hocking"
+output:
+  xaringan::moon_reader:
+    nature:
+      highlightStyle: github
+      countIncrementalSlides: false
+---
+
+```{r opts, echo=FALSE}
+knitr::opts_chunk$set(
+  echo=FALSE, results=FALSE,
+  fig.width=10)
+```
+
+# Visualize iris data
+
+```{r}
+library(ggplot2)
+ggplot()+
+  geom_point(aes(
+    Petal.Length, Petal.Width, color=Species),
+    data=iris)+
+  coord_equal()
+```
+
+---
+
+# Visualize several clusterings 
+
+```{r}
+library(data.table)
+some.iris <- as.matrix(iris[,c("Petal.Width","Petal.Length")])
+kmeans.clusters.list <- list()
+for(n.clusters in 2:5){
+  fit.list <- kmeans(some.iris, n.clusters)
+  kmeans.clusters.list[[paste(n.clusters)]] <- data.table(
+    n.clusters,
+    some.iris,
+    cluster=factor(fit.list$cluster))
+}
+kmeans.clusters <- do.call(rbind, kmeans.clusters.list)
+head(kmeans.clusters)
+gg <- ggplot()+
+  geom_point(aes(
+    Petal.Length, Petal.Width, color=cluster),
+    data=kmeans.clusters)+
+  coord_equal()+
+  facet_grid(n.clusters ~ ., labeller=label_both)+
+  theme_bw()+
+  theme(panel.spacing=grid::unit(0, "lines"))
+directlabels::direct.label(gg, "smart.grid")
+```
+
+---
+
+# Visualize clusters using two random seeds
+
+```{r}
+kmeans.clusters.list <- list()
+for(n.clusters in 2:5)for(seed in 1:2){
+  set.seed(seed)
+  fit.list <- kmeans(some.iris, n.clusters)
+  kmeans.clusters.list[[paste(n.clusters, seed)]] <- data.table(
+    n.clusters,
+    seed, 
+    some.iris,
+    cluster=factor(fit.list$cluster))
+}
+kmeans.clusters <- do.call(rbind, kmeans.clusters.list)
+head(kmeans.clusters)
+gg <- ggplot()+
+  geom_point(aes(
+    Petal.Length, Petal.Width, color=cluster),
+    data=kmeans.clusters)+
+  coord_equal()+
+  facet_grid(n.clusters ~ seed, labeller=label_both)+
+  theme_bw()+
+  theme(panel.spacing=grid::unit(0, "lines"))
+directlabels::direct.label(gg, "smart.grid")
+
+```

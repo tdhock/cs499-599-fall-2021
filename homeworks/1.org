@@ -59,7 +59,7 @@ refers to ggplot code on that web page).
    expectancy, but the time series displays only fertility rate. Make
    another version of the data visualization that shows both time
    series. There should be only one ggplot that looks something like
-   [[http://members.cbio.mines-paristech.fr/~thocking/WorldBank-facets/][this]]. Hint: add another geom_point and use both horizontal and
+   [[https://rcdata.nau.edu/genomic-ml/WorldBank-facets/][this]]. Hint: add another geom_point and use both horizontal and
    vertical panels in facet_grid(row_var ~ col_var).
 3. Create a multi-panel data visualization (scatterplot of data for
    one year in each panel) that shows each year of the WorldBank data

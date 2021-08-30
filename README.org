@@ -61,6 +61,8 @@ pursued as an academic integrity violation.
 [[https://docs.google.com/document/d/1W6-HdQLgHayOFXaQtscO5J5yf05G7E6KeXyiBJFcT7A/edit?usp=sharing][This General Usage Rubric]] will be used to grade the code
 quality/style/efficiency in each of your homeworks.
 
+[[file:demos/][Folder with all code demos from this year]].
+
 Homework topics and readings for each week are listed below. The date
 of the Monday of each week is written. Each homework is due Friday of
 that week, 11:59PM.

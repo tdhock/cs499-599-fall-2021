@@ -14,13 +14,27 @@ knitr::opts_chunk$set(
   fig.width=10)
 ```
 
-# Visualize iris data
+# Visualize iris data with labels
 
 ```{r}
 library(ggplot2)
 ggplot()+
   geom_point(aes(
     Petal.Length, Petal.Width, color=Species),
+    data=iris)+
+  coord_equal()
+```
+
+---
+
+# Visualize iris data without labels
+
+This is the input for clustering algorithms.
+
+```{r}
+ggplot()+
+  geom_point(aes(
+    Petal.Length, Petal.Width),
     data=iris)+
   coord_equal()
 ```

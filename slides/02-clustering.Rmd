@@ -11,27 +11,43 @@ output:
 ```{r opts, echo=FALSE}
 knitr::opts_chunk$set(
   echo=FALSE, results=FALSE,
-  fig.width=10)
+  fig.width=10,
+  fig.height=6)
 ```
 
 # Visualize iris data with labels
 
 ```{r}
 library(ggplot2)
-ggplot()+
+color.code <- c(
+  versicolor="#1B9E77",
+  setosa="#D95F02",
+  virginica="#7570B3",
+  "1"="#E7298A",
+  "2"="#66A61E",
+  "3"="#E6AB02", 
+  "4"="#A6761D")
+gg <- ggplot()+
+  scale_color_manual(values=color.code)+
   geom_point(aes(
     Petal.Length, Petal.Width, color=Species),
     data=iris)+
   coord_equal()
+directlabels::direct.label(gg, "smart.grid")
 ```
 
 ---
 
 # Visualize iris data without labels
 
-This is the input for clustering algorithms.
+- Let $X\in\mathbb R^{150\times 2}$ be the data matrix (input for clustering).
 
-```{r}
+```{r results=TRUE}
+some.iris <- as.matrix(iris[,c("Petal.Width","Petal.Length")])
+head(some.iris)
+```
+
+```{r fig.height=3}
 ggplot()+
   geom_point(aes(
     Petal.Length, Petal.Width),
@@ -45,9 +61,8 @@ ggplot()+
 
 ```{r}
 library(data.table)
-some.iris <- as.matrix(iris[,c("Petal.Width","Petal.Length")])
 kmeans.clusters.list <- list()
-for(n.clusters in 2:5){
+for(n.clusters in 2:4){
   fit.list <- kmeans(some.iris, n.clusters)
   kmeans.clusters.list[[paste(n.clusters)]] <- data.table(
     n.clusters,
@@ -57,6 +72,7 @@ for(n.clusters in 2:5){
 kmeans.clusters <- do.call(rbind, kmeans.clusters.list)
 head(kmeans.clusters)
 gg <- ggplot()+
+  scale_color_manual(values=color.code)+
   geom_point(aes(
     Petal.Length, Petal.Width, color=cluster),
     data=kmeans.clusters)+
@@ -67,13 +83,168 @@ gg <- ggplot()+
 directlabels::direct.label(gg, "smart.grid")
 ```
 
+- K-means algorithm (kmeans function in R).
+- Which K is best? How to choose number of clusters?
+
+```{r}
+plotK <- function(K){
+  fit.list <- kmeans(some.iris, K)
+  plotCluster(fit.list$cluster)
+}
+plotCluster <- function(cluster){
+  kmeans.wide <- data.table(
+    some.iris,
+    label=iris$Species,
+    cluster=factor(cluster))
+  kmeans.compare <- melt(
+    kmeans.wide,
+    measure=c("label", "cluster"),
+    variable.name="type")
+  gg <- ggplot()+
+    scale_color_manual(values=color.code)+
+    kmeans.wide[, ggtitle(paste0(
+      "ARI=",
+      pdfCluster::adj.rand.index(label, cluster)))]+
+    geom_point(aes(
+      Petal.Length, Petal.Width, color=value),
+      data=kmeans.compare)+
+    coord_equal()+
+    facet_grid(type ~ ., labeller=label_both)+
+    theme_bw()+
+    theme(panel.spacing=grid::unit(0, "lines"))
+  directlabels::direct.label(gg, "smart.grid")
+}
+```
+
+---
+
+# Adjusted Rand Index (ARI)
+
+- Measures agreement between two label/cluster vectors (the two
+  vectors must be the same size).
+- Number of labels does not have to be equal to the number of
+  clusters.
+- Labels may be different from clusters, and not obvious to match.
+- Here labels are species names (setosa, virginica, versicolor)
+  whereas clusters are integers (1, 2, 3).
+- Best value = 1 (perfect agreement).
+- Random/constant assignment = 0 (clustering meaningless).
+
+---
+
+# Compare two clusters to labels
+
+```{r}
+plotK(2)
+```
+
+---
+
+# Compare three clusters to labels
+
+```{r}
+plotK(3)
+```
+
+---
+
+# Compare four clusters to labels
+
+```{r}
+plotK(4)
+```
+
+---
+
+# Compare random clusters to labels
+
+```{r}
+plotCluster(as.integer(sample(iris$Species)))
+```
+
+---
+
+# Compute ARI for several clusterings 
+
+```{r, fig.height=3.5}
+kmeans.ARI.list <- list()
+n.clusters.vec <- 1:20
+for(n.clusters in n.clusters.vec){
+  fit.list <- kmeans(some.iris, n.clusters)
+  ARI <- pdfCluster::adj.rand.index(
+    iris$Species, fit.list$cluster)
+  kmeans.ARI.list[[paste(n.clusters)]] <- data.table(
+    n.clusters, ARI)
+}
+kmeans.ARI <- do.call(rbind, kmeans.ARI.list)
+ggplot()+
+  scale_x_continuous(breaks=n.clusters.vec)+
+  geom_point(aes(
+    n.clusters, ARI),
+    data=kmeans.ARI)
+```
+
+- Which K is best? Clear peak at 3 clusters, which makes sense since
+  there are three species in these data.
+- How to choose number of clusters? We don't have access to labels
+  (here, species) at training time, when we run the clustering
+  algorithm.
+
+---
+
+# Compute error for several clusterings 
+
+- Let $X\in\mathbb R^{150\times 2}$ be the data matrix.
+- Let $K$ be the number of clusters.
+- Let $H\in\mathbb R^{150\times K}$ be the matrix which assigns each
+  data point to a cluster (there is a one in every row).
+- Let $M\in\mathbb R^{K\times 2}$ be the matrix of cluster centers.
+- K-means wants to minimize the within-cluster squared error,
+
+$$ \min_{H,M} || X - HM ||_2^2 $$
+
+```{r, fig.height=3.5}
+kmeans.error.list <- list()
+for(n.clusters in n.clusters.vec){
+  fit.list <- kmeans(some.iris, n.clusters)
+  kmeans.error.list[[paste(n.clusters)]] <- data.table(
+    n.clusters,
+    squared.error=fit.list$tot.withinss)
+}
+kmeans.error <- do.call(rbind, kmeans.error.list)
+ggplot()+
+  scale_x_continuous(breaks=n.clusters.vec)+
+  geom_point(aes(
+    n.clusters, squared.error),
+    data=kmeans.error)
+```
+
+---
+
+# Model selection via error curve analysis
+
+```{r, fig.height=3.5}
+ggplot()+
+  scale_x_continuous(breaks=n.clusters.vec)+
+  geom_line(aes(
+    n.clusters, squared.error),
+    data=kmeans.error)
+```
+
+- These error values can be computed using only the input data
+  (labels/outputs are not required).
+- The curve stops decreasing rapidly after three clusters.
+- In general, for any problem/data set, making this plot and then
+  locating the "kink in the curve" is a good rule of thumb for
+  selecting the number of clusters.
+
 ---
 
 # Visualize clusters using two random seeds
 
-```{r}
+```{r, fig.height=5}
 kmeans.clusters.list <- list()
-for(n.clusters in 2:5)for(seed in 1:2){
+for(n.clusters in 2:4)for(seed in 1:2){
   set.seed(seed)
   fit.list <- kmeans(some.iris, n.clusters)
   kmeans.clusters.list[[paste(n.clusters, seed)]] <- data.table(
@@ -85,6 +256,7 @@ for(n.clusters in 2:5)for(seed in 1:2){
 kmeans.clusters <- do.call(rbind, kmeans.clusters.list)
 head(kmeans.clusters)
 gg <- ggplot()+
+  scale_color_manual(values=color.code)+
   geom_point(aes(
     Petal.Length, Petal.Width, color=cluster),
     data=kmeans.clusters)+
@@ -95,3 +267,11 @@ gg <- ggplot()+
 directlabels::direct.label(gg, "smart.grid")
 
 ```
+
+- Goal of K-means is to minimize the squared error.
+- But the optimization is non-convex (hard) due to the 0/1 valued $H$
+  matrix.
+- So not possible to get global (absolute best) minimum in practice.
+- Instead K-means returns a local minimum.
+- Result of K-means algorithm, and quality of local minimum (how close
+  it is to global best) depends on the intialization / random seed.

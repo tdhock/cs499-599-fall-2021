@@ -1,0 +1,52 @@
+K-means clustering
+
+1. Use stats::kmeans() on the zip.test.gz data set. Plot the sum of
+   squared errors (tot.withinss, within-point scatter) as a function
+   of K, for K=1 to 20 clusters. After what K does the squared error
+   start to look flat? If there is no clear kink in the curve,
+   increase the number of clusters. What is the number of clusters you
+   would select based on the kink in the error curve?
+
+2. use pdfCluster::adj.rand.index() to compute the Adjusted Rand Index
+   (ARI) with respect to the true class/digit labels (1 means perfect
+   clustering and values near 0 mean random clusters). Make a plot of
+   ARI versus number of clusters. What is the best value of ARI that
+   you observed, and how many components were the best? Compare this
+   "best" number of clusters to the number that you selected based on
+   the kink in the error curve -- is it the same, or different?
+
+Please submit your code along with your figures and commentary in a
+single PDF.
+
+** For CS599 graduate students only:
+
+Code the K-means algorithm from scratch based on the pseudo-code in
+the textbooks. Start by taking K random data points as the initial K
+cluster centers (use base::sample for random selection). 
+- Write a function KMEANS(data.matrix, K) which returns a list similar
+  to the result of the stats::kmeans function. 
+- for the initialization, you can use sample(1:NROWS, K).
+- Make a figure that compares the within-point scatter (tot.withinss
+  element of the resulting list) for the two kmeans algorithms. Plot
+  tot.withinss as a function of K, using two random starts for each
+  algorithm (there should be four points plotted per K, with different
+  algorithms in different colors). To reduce repetition in your code
+  please use three nested for loops: (1) K=1 to 20, (2)
+  algorithm=yours or stats::kmeans, (3) random seed=1 or 2, e.g.
+
+#+BEGIN_SRC R
+  algo.list <- list(mine=KMEANS, stats=stats::kmeans)
+  ss.dt.list <- list()
+  for(K in 1:20){
+    for(algo.name in names(algo.list)){
+      for(seed in 1:2){
+	set.seed(seed)
+	algo.fun <- algo.list[[algo.name]]
+	result.list <- algo.fun(X, K)
+	ss.dt.list[[paste(K, algo.name, seed)]] <- data.table(
+	  K, algo.name, seed, error=result.list$tot.withinss)
+      }
+    }
+  }
+#+END_SRC
+

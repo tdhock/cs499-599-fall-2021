@@ -72,7 +72,7 @@ that week, 11:59PM.
     [[https://r4ds.had.co.nz/data-visualisation.html][Data visualization chapter of R for Data Science]], [[https://rcdata.nau.edu/genomic-ml/animint2-manual/Ch02-ggplot2.html][Grammar of graphics chapter of Animint2 Manual]].
   - Quizzes Due Tues Aug 24: R Basics 1, R ggplot 1. Due Thurs Aug 26:
     R ggplot 2, R ggplot 3.
-- Aug 30, Homework 2: K-means.
+- Aug 30, [[file:homeworks/2-kmeans.org][Homework 2]]: K-means.
   - Introduction to clustering, MLAPP 25.1. Clustering evaluation,
     MLAPP-25.1.2. K-means is discussed in ESL-14.3.6, MLAPP-11.4.2.5.
   - Quiz due Sun Aug 29: Clustering 1. due Tues Aug 31: Kmeans 1.

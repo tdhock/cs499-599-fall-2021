@@ -237,7 +237,7 @@ ggplot()+
 
 - Let $X\in\mathbb R^{150\times 2}$ be the data matrix.
 - Let $K$ be the number of clusters.
-- Let $H\in\mathbb R^{150\times K}$ be the matrix which assigns each
+- Let $H\in\mathbb \{0,1\}^{150\times K}$ be the matrix which assigns each
   data point to a cluster (there is a one in every row).
 - Let $M\in\mathbb R^{K\times 2}$ be the matrix of cluster centers.
 - K-means wants to minimize the within-cluster squared error,

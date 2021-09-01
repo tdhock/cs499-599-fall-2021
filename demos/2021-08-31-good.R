@@ -12,18 +12,16 @@ data.mat = as.matrix(test.dt)
 ## Rubric). 1. repeated logic, 2. Repeated constants (16), 3. rbind
 ## inside for loop is slow, see
 ## https://tdhock.github.io/blog/2017/rbind-inside-outside/
-number.grids <- data.frame(row = rep(16:1, each=16),
-                          col = rep(1:16, times=16),
-                          intensity = data.mat[1,],
-                          grid.number = 1)
-for(num in 2:facets){
-  number.grids <- rbind(number.grids, data.frame(row = rep(16:1, each=16),
-                                  col = rep(1:16, times=16),
-                                  intensity = data.mat[num,],
-                                 grid.number = num))
+number.grids.list <- list()
+N.pixels <- 16
+for(num in 1:facets){
+  number.grids.list[[paste(num)]] <- data.table(
+    row = rep(N.pixels:1, each=N.pixels),
+    col = rep(1:N.pixels, times=N.pixels),
+    intensity = data.mat[num,],
+    grid.number = num)
 }
-
-number.grids.mat <- as.matrix(number.grids)
+number.grids <- do.call(rbind, number.grids.list)
 
 ggplot() +
   geom_tile(aes(
@@ -68,11 +66,7 @@ geom_line(aes(x, y, color=algorithm), data=DT)+
 scale_color_manual(values=c(kmeans="blue", hclust="red"))
 
 ggplot() +
-  geom_tile(data=first.row.visual,
-            aes(x=col,y=row,fill=data))+
-  geom_tile(data=second.row.visual,
-            aes(x=col,y=row,fill=data))+
-  geom_tile(data=third.row.visual,
-            aes(x=col,y=row,fill=data))+
-  facet_grid(.~image.order) +
+  geom_tile(data=number.grids,
+            aes(x=col,y=row,fill=intensity))+
+  facet_grid(.~grid.number) +
   scale_fill_gradient(low='black',high = 'white')

@@ -1,0 +1,14 @@
+Package: clusterDemo
+Type: Package
+Title: Useful Clustering Functions
+Version: 2021.4.28
+Author: Toby Hocking
+Maintainer: Toby Hocking <toby.hocking@nau.edu>
+Description: Provides an efficient C++ code for
+ various clustering operations.
+License: GPL-3
+
+Suggests: testthat #only used in tests
+Depends: R (>= 2.10) #try not to put packages here.
+LinkingTo: Rcpp #packages which are needed to compile your C++ code.
+Imports: Rcpp, data.table #other packages used in your R code.

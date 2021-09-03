@@ -76,8 +76,9 @@ that week, 11:59PM.
   - [[file:slides/02-clustering.pdf][Slides]], Introduction to clustering, MLAPP 25.1. Clustering evaluation,
     MLAPP-25.1.2. K-means is discussed in ESL-14.3.6, MLAPP-11.4.2.5.
   - Quiz due Sun Aug 29: Clustering 1. due Tues Aug 31: Kmeans 1.
-- Sept 6, Labor day 9/6. Homework 3. Gaussian mixture models
-  - ESL-14.3.7, MLAPP-11.4.2. [[file:mclust-models.jpg][mclust model names figure]].
+- Sept 6, Labor day 9/6. [[file:homeworks/03-gaussian-mixture-models.org][Homework 3]]. Gaussian mixture models
+  - SlidesTODO, ESL-14.3.7, MLAPP-11.4.2. [[file:mclust-models.jpg][mclust model names figure]].
+  - Quiz due Tues Sept 7: mixture 1.
 - Sept 13, Homework 4: Hierarchical Clustering
   - ESL-14.3.12, MLAPP-25.5.1.
 - Sept 20, Homework 5: Clustering model selection

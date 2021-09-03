@@ -15,6 +15,13 @@ K-means clustering
    "best" number of clusters to the number that you selected based on
    the kink in the error curve -- is it the same, or different?
 
+3. (extra credit) Make a facetted ggplot which combines the two
+   results above. Error should be in the top plot and ARI should be in
+   the bottom plot. Hint: add a column named "metric" (with values ARI
+   or error) to each of the two previous result data tables, then
+   combine the two data tables using rbind, use a single geom_line,
+   and use facet_grid(metric ~ ., scales="free").
+
 Please submit your code along with your figures and commentary in a
 single PDF.
 

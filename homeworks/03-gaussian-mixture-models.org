@@ -1,0 +1,65 @@
+Gaussian mixture models
+
+1. Use mclust::Mclust to fit Gaussian mixture models to the zip.test
+   data, for G=1 to 20 mixture components, for a fixed value of
+   modelNames (use one of the diagonal models, ellipsoidal has too
+   many parameters for the 256-dimensional zip.test data). Plot the
+   negative log likelihood as a function of G (number of mixture
+   components). The negative log likelihood should decrease as the
+   number of mixture components increases. After what G does the log
+   likelihood start to look flat?
+- if mclust::Mclust does not work for you (some students reported it
+  returns NULL), it may be because your data set is in the wrong
+  format (make sure it is a numeric matrix). You can also try using
+  another package that implements Gaussian mixture models,
+  e.g. Rmixmod, mixture, EMCluster, mixtools, bgmm, flexmix.
+
+2. Use pdfCluster::adj.rand.index to compute the Adjusted Rand Index
+   (ARI) with respect to the true class/digit labels (1 means perfect
+   clustering and values near 0 mean random clusters). Make a plot of
+   ARI versus number of mixture components. What is the best value of
+   ARI that you observed? How many components?
+
+3. (extra credit) Create a new plot of ARI which compares Gaussian
+   mixtures to kmeans (same results as homework 2). Which of the two
+   algorithms is most accurate, and at what number of clusters? Hint:
+   add a column named "algorithm" (with values GMM and kmeans) to each
+   of the two data tables, then combine them with rbind, and use a
+   single geom_line with aes(color=algorithm) to draw each algorithm
+   in a different color.
+
+Please submit your code along with your figures and commentary in a
+single PDF.
+
+** For CS599 graduate students only:
+
+Code the EM algorithm from scratch based on the pseudo-code in the
+textbooks. 
+- Write a function GMM(data.matrix, K) which returns a list similar
+  to the result of the stats::kmeans function. 
+- for the initialization, you can use the cluster assignments from
+  kmeans.
+- Make a figure that compares the negative log likelihood (NLL) for
+  the two kmeans algorithms. Plot NLL as a function of K (number of
+  clusters), using two random starts for each algorithm (there should
+  be four points plotted per K, with different algorithms in different
+  colors). To reduce repetition in your code please use three nested
+  for loops: (1) K=1 to 20, (2) algorithm=yours or mclust, (3) random
+  seed=1 or 2, e.g.
+
+#+BEGIN_SRC R
+  algo.list <- list(mine=GMM, stats=mclust::Mclust)
+  ss.dt.list <- list()
+  for(K in 1:20){
+    for(algo.name in names(algo.list)){
+      for(seed in 1:2){
+	set.seed(seed)
+	algo.fun <- algo.list[[algo.name]]
+	result.list <- algo.fun(X, K)
+	ss.dt.list[[paste(K, algo.name, seed)]] <- data.table(
+	  K, algo.name, seed, NLL=-result.list$loglik)
+      }
+    }
+  }
+#+END_SRC
+

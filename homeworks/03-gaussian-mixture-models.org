@@ -8,18 +8,16 @@ Gaussian mixture models
    components). The negative log likelihood should decrease as the
    number of mixture components increases. After what G does the log
    likelihood start to look flat?
-- if mclust::Mclust does not work for you (some students reported it
-  returns NULL), it may be because your data set is in the wrong
-  format (make sure it is a numeric matrix). You can also try using
-  another package that implements Gaussian mixture models,
-  e.g. Rmixmod, mixture, EMCluster, mixtools, bgmm, flexmix.
-
+   - if mclust::Mclust does not work for you (some students reported
+     it returns NULL), it may be because your data set is in the wrong
+     format (make sure it is a numeric matrix). You can also try using
+     another package that implements Gaussian mixture models,
+     e.g. Rmixmod, mixture, EMCluster, mixtools, bgmm, flexmix.
 2. Use pdfCluster::adj.rand.index to compute the Adjusted Rand Index
    (ARI) with respect to the true class/digit labels (1 means perfect
    clustering and values near 0 mean random clusters). Make a plot of
    ARI versus number of mixture components. What is the best value of
    ARI that you observed? How many components?
-
 3. (extra credit) Create a new plot of ARI which compares Gaussian
    mixtures to kmeans (same results as homework 2). Which of the two
    algorithms is most accurate, and at what number of clusters? Hint:

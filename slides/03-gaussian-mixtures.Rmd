@@ -79,6 +79,7 @@ x.args <- apply(data.mat, 2, function(x){
 })
 grid.dt <- data.table(do.call(expand.grid, x.args))
 grid.mat <- as.matrix(grid.dt)
+library(mclust)
 plotMclustType <- function(type){
   gmm.clusters.list <- list()
   gmm.density.list <- list()
@@ -336,7 +337,6 @@ for(n.clusters in 2:4){
 data.density <- do.call(rbind, data.density.list)
 data.lik <- do.call(rbind, data.lik.list)
 grid.density <- do.call(rbind, grid.density.list)
-
 ggplot()+
   geom_raster(aes(
     Petal.Length, Petal.Width, fill=density),
@@ -476,16 +476,16 @@ head(gmm.seeds)
 gg <- ggplot()+
   scale_color_manual(values=color.code)+
   scale_fill_manual(values=color.code)+
-  geom_text(aes(
-    1, 2.5, label=paste0("error=", error)),
-    hjust=0,
-    vjust=1,
-    data=gmm.seeds[, .(count=.N), by=.(n.clusters, seed, error)])+
   geom_point(aes(
     Petal.Length, Petal.Width, fill=cluster),
     shape=21,
     color="black",
     data=gmm.seeds)+
+  geom_text(aes(
+    1, 2.5, label=sprintf("error=%.4f", error)),
+    hjust=0,
+    vjust=1,
+    data=gmm.seeds[, .(count=.N), by=.(n.clusters, seed, error)])+
   geom_path(aes(
     Petal.Length, Petal.Width, group=cluster, color=cluster),
     data=gmm.ellipse)+
@@ -500,37 +500,27 @@ gg <- ggplot()+
   
 ---
 
-# EM algo starting with three random cluster centers
-
-TODO
+# EM algo starts with 0/1 prob matrix 
 
 ```{r}
 n.clusters <- 3
-data.dt <- data.table(data.mat)
 set.seed(5)
 ##set.seed(3)#takes more iterations.
-centers.dt <- data.dt[sample(1:.N, n.clusters)]
-centers.mat <- as.matrix(centers.dt)
-centers.dt[, cluster := factor(1:n.clusters)]
-dl.dt <- rbind(
-  data.table(data.dt, cluster=0),
-  centers.dt)
-ggplot()+
+kmeans.result <- kmeans(data.mat, n.clusters)
+data.dt <- data.table(data.mat, cluster=factor(kmeans.result[["cluster"]]))
+prob.mat <- matrix(
+  0, nrow(data.mat), n.clusters,
+  dimnames=list(data=1:nrow(data.mat), cluster=NULL))
+prob.mat[cbind(1:nrow(data.mat), kmeans.result$cluster)] <- 1
+set.seed(1)
+print(prob.mat[sample(1:nrow(prob.mat), 6),])
+gg <- ggplot()+
   scale_color_manual(values=color.code, guide="none")+
   geom_point(aes(
-    Petal.Length, Petal.Width),
-    data=data.dt)+
-  geom_point(aes(
     Petal.Length, Petal.Width, color=cluster),
-    data=centers.dt)+
-  directlabels::geom_dl(aes(
-    Petal.Length, Petal.Width, color=cluster, label=cluster),
-    data=dl.dt,
-    method=list(
-      "smart.grid",
-      function(d,...)subset(d, as.integer(paste(groups))>0))
-    )+
+    data=data.dt)+
   coord_equal()
+directlabels::direct.label(gg, "smart.grid")
 ```
 
 ---

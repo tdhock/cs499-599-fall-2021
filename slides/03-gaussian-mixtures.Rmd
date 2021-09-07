@@ -500,7 +500,7 @@ gg <- ggplot()+
   
 ---
 
-# EM algo starts with 0/1 prob matrix 
+# EM algo starting with K-means assignments
 
 ```{r}
 n.clusters <- 3

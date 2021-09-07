@@ -36,11 +36,12 @@ directlabels::direct.label(gg, "smart.grid")
 
 # Visualize iris data without labels
 
-- Let $X\in\mathbb R^{150\times 2}$ be the data matrix (input for clustering).
+- Let $X\in\mathbb R^{n\times p}$ be the data matrix (input for clustering).
+- Example iris $n=150$ observations, $p=2$ dimensions.
 
 ```{r results=TRUE}
 data.mat <- as.matrix(iris[,c("Petal.Width","Petal.Length")])
-head(data.mat)
+data.mat[1:4,]
 ```
 
 ```{r fig.height=3}
@@ -54,7 +55,7 @@ ggplot()+
     data=iris)+
   coord_equal()
 
-getXY <- function(mu, sigma, k=15){
+get_ellipse_points <- function(mu, sigma, k=15){
   ## from mvn2plot, explanation on
   ## https://www.visiondummy.com/2014/04/draw-error-ellipse-representing-covariance-matrix/
   p <- length(mu)
@@ -71,7 +72,7 @@ getXY <- function(mu, sigma, k=15){
   xy <- cbind(c(x, rev(-x), -x, rev(x)), c(y, rev(y), -y, rev(-y))) %*% V
   out <- sweep(xy, MARGIN = 2, STATS = mu, FUN = "+")
   colnames(out) <- names(mu)
-  cbind(out, i=rep(1:4, each=length(x)), first=seq_along(x)==1)
+  out
 }  
 library(data.table)
 x.args <- apply(data.mat, 2, function(x){
@@ -91,7 +92,14 @@ plotMclustType <- function(type){
     if(n.clusters==3){
       ##print(cov.array)
       some.names <- !names(var.list) %in% c("modelName", "d", "G")
-      print(var.list[some.names])
+      cov.wide = matrix(
+        var.list$sigma,
+        2, 2*n.clusters,
+        dimnames=list(
+          c("width", "length"),
+          rep(paste0("c", 1:n.clusters), each=2)))
+      ##print(var.list[some.names])
+      print(round(cov.wide, digits=4))
     }
     if(FALSE){
       ## equal volume means product of covariance diagonal.
@@ -107,7 +115,7 @@ plotMclustType <- function(type){
       gmm.ellipse.list[[paste(n.clusters, cluster)]] <- data.table(
         n.clusters,
         cluster=factor(cluster),
-        getXY(cluster.mean.vec, cluster.cov.mat))
+        get_ellipse_points(cluster.mean.vec, cluster.cov.mat))
       gmm.density.list[[paste(n.clusters, cluster)]] <- data.table(
         n.clusters,
         cluster=factor(cluster),
@@ -134,26 +142,19 @@ plotMclustType <- function(type){
     scale_color_manual(values=color.code)+
     geom_point(aes(
       Petal.Length, Petal.Width, color=cluster),
-      data=gmm.data)+
-    geom_contour(aes(
-      Petal.Length, Petal.Width, z=density, group=cluster, color=cluster),
-      data=gmm.density)+
-    coord_equal()+
-    facet_grid(n.clusters ~ ., labeller=label_both)
-  gg <- ggplot()+
-    scale_color_manual(values=color.code)+
-    geom_point(aes(
-      Petal.Length, Petal.Width, color=cluster),
+      shape=1,
       data=gmm.data)+
     geom_path(aes(
-      Petal.Length, Petal.Width, group=cluster, color=cluster),
+      Petal.Length, Petal.Width, group=cluster),
+      size=2,
+      color="white",
       data=gmm.ellipse)+
-    ## geom_point(aes(
-    ##   Petal.Length, Petal.Width, fill=factor(i), size=factor(first)),
-    ##   shape=21,
-    ##   data=gmm.ellipse)+
+    geom_path(aes(
+      Petal.Length, Petal.Width, group=cluster, color=cluster),
+      size=1,
+      data=gmm.ellipse)+
     scale_size_manual(values=c(1,2))+
-    coord_equal()+
+    coord_equal(xlim=c(0,7), ylim=c(-0.5, 3))+
     facet_grid(n.clusters ~ ., labeller=label_both)
   directlabels::direct.label(gg, "smart.grid")
 }
@@ -168,7 +169,7 @@ plotK <- function(n.clusters){
     gmm.ellipse.list[[paste(cluster)]] <- data.table(
       type="cluster",
       cluster=factor(cluster),
-      getXY(cluster.mean.vec, cluster.cov.mat))
+      get_ellipse_points(cluster.mean.vec, cluster.cov.mat))
   }
   gmm.ellipse <- do.call(rbind, gmm.ellipse.list)
   gmm.wide <- data.table(
@@ -189,6 +190,12 @@ plotK <- function(n.clusters){
       data=gmm.compare)+
     geom_path(aes(
       Petal.Length, Petal.Width, group=cluster, color=cluster),
+      size=2,
+      color="white",
+      data=gmm.ellipse)+
+    geom_path(aes(
+      Petal.Length, Petal.Width, group=cluster, color=cluster),
+      size=1,
       data=gmm.ellipse)+
     coord_equal()+
     facet_grid(type ~ ., labeller=label_both)
@@ -200,9 +207,26 @@ plotK <- function(n.clusters){
 
 ---
 
+# Gaussian mixture model parameters
+
+Need to fix number of clusters $K$, then for every
+$k\in\mathbb\{1,\dots,K\}$ we have cluster-specific parameters
+$\theta_k = [\mu_k, S_k, \pi_k]$,
+
+- mean vector $\mu_k\in\mathbb R^p$,
+- covariance matrix $S_k\in\mathbb R^{p\times p}$, (must
+  be symmetric, positive definite)
+- prior weight $\pi_k\in[0,1]$ (sum over all clusters $k$ must equal
+  one).
+  
+There can be additional constraints on the covariance matrix (next
+slides).
+
+---
+
 # spherical, equal volume
 
-```{r}
+```{r, results=TRUE}
 plotMclustType("EII")
 ```
 
@@ -210,7 +234,7 @@ plotMclustType("EII")
 
 # spherical, unequal volume
 
-```{r}
+```{r, results=TRUE}
 plotMclustType("VII")
 ```
 
@@ -218,7 +242,7 @@ plotMclustType("VII")
 
 # diagonal, equal volume and shape
 
-```{r}
+```{r, results=TRUE}
 plotMclustType("EEI")
 ```
 
@@ -226,7 +250,7 @@ plotMclustType("EEI")
 
 # diagonal, varying volume, equal shape
 
-```{r}
+```{r, results=TRUE}
 plotMclustType("VEI")
 ```
 
@@ -234,7 +258,7 @@ plotMclustType("VEI")
 
 # diagonal, equal volume, varying shape
 
-```{r}
+```{r, results=TRUE}
 plotMclustType("EVI")
 ```
 
@@ -242,19 +266,19 @@ plotMclustType("EVI")
 
 # diagonal, varying volume and shape
 
-```{r}
+```{r, results=TRUE}
 plotMclustType("VVI")
 ```
 
 # ellipsoidal, equal volume, shape, and orientation
 
-```{r}
+```{r, results=TRUE}
 plotMclustType("EEE")
 ```
 
 # ellipsoidal, varying volume, shape, and orientation
 
-```{r}
+```{r, results=TRUE}
 plotMclustType("VVV")
 ```
 
@@ -459,7 +483,7 @@ for(n.clusters in 2:4)for(seed in 2:3){
       n.clusters,
       seed,
       cluster=factor(cluster),
-      getXY(cluster.mean.vec, cluster.cov.mat))
+      get_ellipse_points(cluster.mean.vec, cluster.cov.mat))
   }
   dens.mat <- with(
     fit.list, cdens(modelName, data.mat, parameters=parameters))
@@ -488,6 +512,12 @@ gg <- ggplot()+
     data=gmm.seeds[, .(count=.N), by=.(n.clusters, seed, error)])+
   geom_path(aes(
     Petal.Length, Petal.Width, group=cluster, color=cluster),
+    size=2,
+    color="white",
+    data=gmm.ellipse)+
+  geom_path(aes(
+    Petal.Length, Petal.Width, group=cluster, color=cluster),
+    size=1,
     data=gmm.ellipse)+
   coord_equal()+
   facet_grid(n.clusters ~ seed, labeller=label_both)
@@ -503,7 +533,7 @@ gg <- ggplot()+
 # EM algo starting with K-means assignments
 
 ```{r}
-n.clusters <- 3
+n.clusters <- 2
 set.seed(5)
 ##set.seed(3)#takes more iterations.
 kmeans.result <- kmeans(data.mat, n.clusters)
@@ -520,244 +550,153 @@ gg <- ggplot()+
     Petal.Length, Petal.Width, color=cluster),
     data=data.dt)+
   coord_equal()
-directlabels::direct.label(gg, "smart.grid")
+(dl <- directlabels::direct.label(gg, "smart.grid"))
 ```
 
 ---
 
-# Compute closest cluster center for each data point
+# Compute weights, means, covariance matrices
 
 ```{r}
-pairs.dt <- data.table(expand.grid(
-  data.i=1:nrow(data.mat),
-  centers.i=1:nrow(centers.mat)))
-update.closest <- function(){
-  pairs.dt[, error := rowSums((data.mat[data.i,]-centers.mat[centers.i,])^2)]
-  closest.dt <<- pairs.dt[, .SD[which.min(error)], by=data.i]
+cluster.param.list <- list()
+update.cluster.params = function(){
+  cluster.ellipse.dt.list <- list()
+  for(cluster in 1:n.clusters){
+    prob.vec <- prob.mat[,cluster]
+    these.params <- list(
+      prior.weight=mean(prob.vec),
+      mean.vec=colSums(prob.vec * data.mat)/sum(prob.vec))
+    diff.mat <- t(data.mat)-these.params$mean.vec
+    these.params$cov.mat <-
+      diff.mat %*% (prob.vec * t(diff.mat))/sum(prob.vec)
+    cluster.ellipse.dt.list[[cluster]] <- data.table(
+      cluster=factor(cluster),
+      with(these.params, get_ellipse_points(mean.vec, cov.mat)))
+    cluster.param.list[[cluster]] <<- these.params
+  }
+  cluster.ellipse.dt <<- do.call(rbind, cluster.ellipse.dt.list)
 }
-update.closest()
-show.dt.list <- list()
-show.one <- function(show.i){
-  dist.dt <- data.table(
-    centers.dt,
-    data.dt[show.i, .(width=Petal.Width, length=Petal.Length)])
-  show.dt.list[[paste(show.i)]] <<- closest.dt[
-    show.i, .(data.dt[data.i], cluster=factor(centers.i)) ]
-  show.dt <- do.call(rbind, show.dt.list)
+data.and.ellipses = function(){
+  ll.mat = matrix(NA, nrow(data.mat), n.clusters)
+  for(cluster in 1:n.clusters){
+    ll.mat[,cluster] = with(
+      cluster.param.list[[cluster]],
+      prior.weight*mvtnorm::dmvnorm(
+        data.mat, mean.vec, cov.mat))
+  }
+  ll.dt <- data.table(log.lik=sum(ll.mat))
+  data.dt[, prob1 := prob.mat[,1] ]
   ggplot()+
     scale_color_manual(values=color.code, guide="none")+
     geom_point(aes(
-      Petal.Length, Petal.Width),
-      color="grey50",
+      Petal.Length, Petal.Width, fill=prob1),
+      shape=21,
       data=data.dt)+
-    geom_point(aes(
-      Petal.Length, Petal.Width, color=cluster),
-      shape=shape.code[["centers"]],
-      size=size.code[["centers"]],
-      data=centers.dt)+
-    directlabels::geom_dl(aes(
-      Petal.Length, Petal.Width, color=cluster, label=cluster),
-      data=dl.dt,
-      method=list(
-        "smart.grid",
-        function(d,...)subset(d, as.integer(paste(groups))>0))
-      )+
-    coord_equal()+
-    geom_segment(aes(
-      length, width,
-      xend=Petal.Length, yend=Petal.Width),
-      data=dist.dt)+
-    geom_point(aes(
-      Petal.Length, Petal.Width, color=cluster),
-      data=show.dt)
-}
-show.one(10)
-```
-
----
-
-# Compute closest cluster center for each data point
-
-```{r}
-show.one(50)
-```
-
----
-
-# Compute closest cluster center for each data point
-
-```{r}
-show.one(150)
-```
-
----
-
-# Compute closest cluster center for each data point
-
-```{r}
-show.one(115)
-```
-
----
-
-# Compute closest cluster center for each data point
-
-```{r}
-show.one(80)
-```
-
----
-
-# All data points assigned to nearest cluster
-
-```{r}
-data.and.centers <- function(){
-  both.dt <- rbind(
-    data.table(type="centers", centers.dt),
-    closest.dt[, .(type="data", data.dt[data.i], cluster=factor(centers.i))])
-  ggplot()+
-    scale_color_manual(values=color.code, guide="none")+
-    scale_size_manual(values=size.code)+
-    scale_shape_manual(values=shape.code)+
-    geom_point(aes(
-      Petal.Length, Petal.Width, color=cluster, size=type, shape=type),
-      data=both.dt)+
+    geom_text(aes(
+      1, 2.5, label=sprintf("log(lik)=%.4f", log.lik)),
+      hjust=0,
+      vjust=1,
+      data=ll.dt)+
+    scale_fill_gradient2(
+      limits=c(0,1),
+      high=color.code[["1"]],
+      midpoint=0.5,
+      low=color.code[["2"]])+
+    geom_path(aes(
+      Petal.Length, Petal.Width, group=cluster),
+      color="white",
+      size=2,
+      data=cluster.ellipse.dt)+
+    geom_path(aes(
+      Petal.Length, Petal.Width, group=cluster, color=cluster),
+      size=1,
+      data=cluster.ellipse.dt)+
     coord_equal()
 }
-data.and.centers()
+
+update.cluster.params()
+data.and.ellipses()
 ```
 
 ---
 
-# Cluster centers updated
+# Cluster probabilities updated
 
 ```{r}
-update.centers <- function(){
-  new.dt <- closest.dt[, data.table(
-    t(colMeans(data.dt[data.i]))
-  ), by=.(cluster=centers.i)]
-  centers.dt <<- new.dt[, names(centers.dt), with=FALSE]
-  centers.mat <<- as.matrix(centers.dt[, colnames(centers.mat), with=FALSE])
+update.prob.mat = function(){
+  numerator.mat = matrix(NA, nrow(data.mat), n.clusters)
+  for(cluster in 1:n.clusters){
+    numerator.mat[,cluster] = with(
+      cluster.param.list[[cluster]],
+      prior.weight*mvtnorm::dmvnorm(
+        data.mat, mean.vec, cov.mat))
+  }
+  prob.mat <<- numerator.mat/rowSums(numerator.mat)
 }
-update.centers()
-data.and.centers()
+
+update.prob.mat()
+data.and.ellipses()
 ```
 
 ---
 
-# Compute new assignments
+# Compute new cluster parameters
 
 ```{r}
-update.closest()
-data.and.centers()
+update.cluster.params()
+data.and.ellipses()
 ```
 
 ---
 
-# Compute new centers 
+# Compute new cluster/data probabilities
 
 ```{r}
-update.centers()
-data.and.centers()
+update.prob.mat()
+data.and.ellipses()
 ```
 
 ---
 
-# Compute assignments iteration 3
+# Compute cluster parameters iteration 3
 
 ```{r}
-update.closest()
-data.and.centers()
+update.cluster.params()
+data.and.ellipses()
 ```
 
 ---
 
-# Compute centers iteration 3
+# Compute probabilities iteration 3
 
 ```{r}
-update.centers()
-data.and.centers()
+update.prob.mat()
+data.and.ellipses()
 ```
 
 ---
 
-# Compute assignments iteration 4
+# Compute cluster parameters iteration 4
 
 ```{r}
-update.closest()
-data.and.centers()
+update.cluster.params()
+data.and.ellipses()
 ```
 
 ---
 
-# Compute centers iteration 4
+# Compute probabilities iteration 4
 
 ```{r}
-update.centers()
-data.and.centers()
+update.prob.mat()
+data.and.ellipses()
 ```
 
 ---
 
-# Compute assignments iteration 5
+# Compute cluster parameters iteration 5 (no change = stop)
 
 ```{r}
-update.closest()
-data.and.centers()
+update.cluster.params()
+data.and.ellipses()
 ```
-
----
-
-# Compute centers iteration 5
-
-```{r}
-update.centers()
-data.and.centers()
-```
-
-
----
-
-# Compute assignments iteration 6
-
-```{r}
-update.closest()
-data.and.centers()
-```
-
----
-
-# Compute centers iteration 6
-
-```{r}
-update.centers()
-data.and.centers()
-```
-
----
-
-# Compute assignments iteration 7
-
-```{r}
-update.closest()
-data.and.centers()
-```
-
----
-
-# Compute centers iteration 7
-
-```{r}
-update.centers()
-data.and.centers()
-```
-
----
-
-# Compute assignments iteration 8 (no change = stop)
-
-```{r}
-update.closest()
-data.and.centers()
-```
-

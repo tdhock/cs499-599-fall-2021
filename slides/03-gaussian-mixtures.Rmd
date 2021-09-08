@@ -602,7 +602,7 @@ data.and.ellipses = function(){
       prior.weight*mvtnorm::dmvnorm(
         data.mat, mean.vec, cov.mat))
   }
-  ll.dt <- data.table(log.lik=sum(ll.mat))
+  ll.dt <- data.table(log.lik=sum(log(rowSums(ll.mat))))
   data.dt[, prob1 := prob.mat[,1] ]
   ggplot()+
     scale_color_manual(values=color.code, guide="none")+
@@ -720,4 +720,274 @@ data.and.ellipses()
 ```
 ---
 
-# TODO explain constraints
+# Three clusters, diagonal constraint, random initialization
+
+```{r}
+update.cluster.params = function(){
+  cluster.ellipse.dt.list <- list()
+  for(cluster in 1:n.clusters){
+    prob.vec <- prob.mat[,cluster]
+    these.params <- list(
+      prior.weight=mean(prob.vec),
+      mean.vec=colSums(prob.vec * data.mat)/sum(prob.vec))
+    diff.mat <- t(data.mat)-these.params$mean.vec
+    if(FALSE){#slow for high dimensional data.
+      ## diff.mat is p x n so computing Wk is O(p^2 n)
+      Wk <- diff.mat %*% (prob.vec * t(diff.mat)) #p x p.
+      Blk <- diag(diag(Wk)) #same as below but slower.
+    }
+    ## computing diag matrix below is only O(p n), faster by a factor
+    ## of p.
+    Blk <- diag(colSums(t(diff.mat)^2 * prob.vec))
+    these.params$cov.mat <- Blk/sum(prob.vec)
+    cluster.ellipse.dt.list[[cluster]] <- data.table(
+      cluster=factor(cluster),
+      with(these.params, get_ellipse_points(mean.vec, cov.mat)))
+    cluster.param.list[[cluster]] <<- these.params
+  }
+  cluster.ellipse.dt <<- do.call(rbind, cluster.ellipse.dt.list)
+}
+data.and.ellipses = function(){
+  ll.mat = matrix(NA, nrow(data.mat), n.clusters)
+  for(cluster in 1:n.clusters){
+    ll.mat[,cluster] = with(
+      cluster.param.list[[cluster]],
+      prior.weight*mvtnorm::dmvnorm(
+        data.mat, mean.vec, cov.mat))
+  }
+  ll.dt <- data.table(log.lik=sum(log(rowSums(ll.mat))))
+  data.dt[, cluster := factor(apply(prob.mat, 1, which.max)) ]
+  data.dt[, max.prob := apply(prob.mat, 1, max)]
+  gg <- ggplot()+
+    scale_fill_manual(values=color.code, guide="none")+
+    scale_color_manual(values=color.code, guide="none")+
+    geom_point(aes(
+      Petal.Length, Petal.Width),
+      fill="white",
+      shape=21,
+      data=data.dt)+
+    geom_point(aes(
+      Petal.Length, Petal.Width, fill=cluster, alpha=max.prob),
+      shape=21,
+      data=data.dt)+
+    geom_text(aes(
+      1, 2.5, label=sprintf("log(lik)=%.4f", log.lik)),
+      hjust=0,
+      vjust=1,
+      data=ll.dt)+
+    scale_alpha_continuous(
+      limits=c(1/n.clusters,1))+
+    geom_path(aes(
+      Petal.Length, Petal.Width, group=cluster),
+      color="white",
+      size=2,
+      data=cluster.ellipse.dt)+
+    geom_path(aes(
+      Petal.Length, Petal.Width, group=cluster, color=cluster),
+      size=1,
+      data=cluster.ellipse.dt)+
+    coord_equal()
+  directlabels::direct.label(gg, "smart.grid")
+}
+n.clusters <- 3
+rand.mat <- matrix(
+  0, nrow(data.mat), n.clusters,
+  dimnames=list(data=1:nrow(data.mat), cluster=NULL))
+set.seed(1)
+rand.mat[seq_along(rand.mat)] <- runif(length(rand.mat))
+prob.mat <- rand.mat/rowSums(rand.mat)
+
+update.cluster.params()
+data.and.ellipses()
+```
+
+---
+
+# iteration 2
+
+```{r}
+update.prob.mat()
+update.cluster.params()
+data.and.ellipses()
+```
+
+---
+
+# iteration 3
+
+```{r}
+update.prob.mat()
+update.cluster.params()
+data.and.ellipses()
+```
+
+---
+
+# iteration 4
+
+```{r}
+update.prob.mat()
+update.cluster.params()
+data.and.ellipses()
+```
+
+---
+
+# iteration 5
+
+```{r}
+update.prob.mat()
+update.cluster.params()
+data.and.ellipses()
+```
+
+---
+
+# iteration 6
+
+```{r}
+update.prob.mat()
+update.cluster.params()
+data.and.ellipses()
+```
+
+---
+
+# iteration 7
+
+```{r}
+update.prob.mat()
+update.cluster.params()
+data.and.ellipses()
+```
+
+---
+
+# iteration 8
+
+```{r}
+update.prob.mat()
+update.cluster.params()
+data.and.ellipses()
+```
+
+---
+
+# iteration 9
+
+```{r}
+update.prob.mat()
+update.cluster.params()
+data.and.ellipses()
+```
+
+---
+
+# iteration 10
+
+```{r}
+update.prob.mat()
+update.cluster.params()
+data.and.ellipses()
+```
+
+---
+
+# iteration 11
+
+```{r}
+update.prob.mat()
+update.cluster.params()
+data.and.ellipses()
+```
+
+---
+
+# iteration 12
+
+```{r}
+update.prob.mat()
+update.cluster.params()
+data.and.ellipses()
+```
+
+---
+
+# iteration 13
+
+```{r}
+update.prob.mat()
+update.cluster.params()
+data.and.ellipses()
+```
+
+---
+
+# iteration 14
+
+```{r}
+update.prob.mat()
+update.cluster.params()
+data.and.ellipses()
+```
+
+---
+
+# iteration 15
+
+```{r}
+update.prob.mat()
+update.cluster.params()
+data.and.ellipses()
+```
+
+---
+
+# iteration 16
+
+```{r}
+update.prob.mat()
+update.cluster.params()
+data.and.ellipses()
+```
+
+---
+
+# iteration 17
+
+```{r}
+update.prob.mat()
+update.cluster.params()
+data.and.ellipses()
+```
+
+---
+
+# iteration 18
+
+```{r}
+update.prob.mat()
+update.cluster.params()
+data.and.ellipses()
+```
+
+---
+
+# iteration 19
+
+```{r}
+update.prob.mat()
+update.cluster.params()
+data.and.ellipses()
+```
+
+---
+
+# iteration 20
+
+```{r}
+update.prob.mat()
+update.cluster.params()
+data.and.ellipses()
+```
+

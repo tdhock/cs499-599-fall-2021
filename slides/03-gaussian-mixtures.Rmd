@@ -207,20 +207,21 @@ plotK <- function(n.clusters){
 
 ---
 
-# Gaussian mixture model parameters
+# Gaussian mixture model parameters and EM algorithm
 
 Need to fix number of clusters $K$, then for every
 $k\in\mathbb\{1,\dots,K\}$ we have cluster-specific parameters
-$\theta_k = [\mu_k, S_k, \pi_k]$,
+$\theta_k = [\mu_k, S_k, \pi_k]$ which are updated during M step,
 
 - mean vector $\mu_k\in\mathbb R^p$,
-- covariance matrix $S_k\in\mathbb R^{p\times p}$, (must
-  be symmetric, positive definite)
+- covariance matrix $S_k\in\mathbb R^{p\times p}$, (must be symmetric,
+  positive definite, next slides show optional additional constraints)
 - prior weight $\pi_k\in[0,1]$ (sum over all clusters $k$ must equal
   one).
   
-There can be additional constraints on the covariance matrix (next
-slides).
+During E step we compute the probability matrix $T\in\mathbb
+[0,1]^{n\times K}$, where each row $i$ sums to 1 and each entry
+$T_{ik}$ is probability that data $i$ is in cluster $k$.
 
 ---
 
@@ -530,6 +531,23 @@ gg <- ggplot()+
   
 ---
 
+# EM algo update rules
+
+Let $f(x, \mu, S)$ be the (multivariate) normal density for a feature
+vector $x\in\mathbb R^p$, a mean vector $\mu\in\mathbb R^p$, and a
+covariance matrix $S\in\mathbb R^{p\times p}$.
+
+In the E step we update the probability matrix,
+$$T_{ik} \gets \frac{\pi_k f(x_i, \mu_k, S_k)}{\sum_{k=1}^K \pi_k f(x_i, \mu_k, S_k)}$$.
+
+In the M step we update the cluster parameters,
+
+- $\pi_k \gets \frac{1}{n}\sum_{i=1}^n T_{i,k}$,
+- $\mu_k \gets \frac{\sum_{i=1}^k T_{i,k} x_i}{\sum_{i=1}^k T_{i,k}}$,
+- $S_k \gets \frac{\sum_{i=1}^k T_{i,k} (x_i-\mu_k)(x_i-\mu_k)^\intercal}{\sum_{i=1}^k T_{i,k}}$.
+
+---
+
 # EM algo starting with K-means assignments
 
 ```{r}
@@ -700,3 +718,6 @@ data.and.ellipses()
 update.cluster.params()
 data.and.ellipses()
 ```
+---
+
+# TODO explain constraints

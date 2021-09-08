@@ -10,9 +10,13 @@ Gaussian mixture models
    likelihood start to look flat?
    - if mclust::Mclust does not work for you (some students reported
      it returns NULL), it may be because your data set is in the wrong
-     format (make sure it is a numeric matrix). You can also try using
-     another package that implements Gaussian mixture models,
-     e.g. Rmixmod, mixture, EMCluster, mixtools, bgmm, flexmix.
+     format (make sure it is a numeric matrix).
+   - if it is too slow on your computer, try a simpler modelNames
+     parameter, or try using a subset of rows (maybe only 500?) --
+     results for some data are better than no result for full data!
+   - You can also try using another package that implements Gaussian
+     mixture models, e.g. Rmixmod, mixture, EMCluster, mixtools, bgmm,
+     flexmix.
 2. Use pdfCluster::adj.rand.index to compute the Adjusted Rand Index
    (ARI) with respect to the true class/digit labels (1 means perfect
    clustering and values near 0 mean random clusters). Make a plot of
@@ -33,12 +37,17 @@ single PDF.
 
 Code the EM algorithm from scratch based on the pseudo-code in the
 textbooks. 
-- Write a function GMM(data.matrix, K) which returns a list similar
-  to the result of the stats::kmeans function. 
-- for the initialization, you can use the cluster assignments from
-  kmeans.
+- Write a function GMM(data.matrix, K) which returns a list similar to
+  the result of the mclust::Mclust function (with at least elements
+  loglik and classification).
+- for the initialization, you can use a random probability matrix, or
+  the cluster assignments from kmeans.
+- for the covariance updates, make sure to use a diagonal covariance
+  matrix so it is computational tractable (asymptotically linear
+  rather than quadratic), and compare with the equivalent modelNames
+  parameter from mclust.
 - Make a figure that compares the negative log likelihood (NLL) for
-  the two kmeans algorithms. Plot NLL as a function of K (number of
+  the two algorithms. Plot NLL as a function of K (number of
   clusters), using two random starts for each algorithm (there should
   be four points plotted per K, with different algorithms in different
   colors). To reduce repetition in your code please use three nested

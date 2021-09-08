@@ -77,10 +77,11 @@ that week, 11:59PM.
     MLAPP-25.1.2. K-means is discussed in ESL-14.3.6, MLAPP-11.4.2.5.
   - Quiz due Sun Aug 29: Clustering 1. due Tues Aug 31: Kmeans 1.
 - Sept 6, Labor day 9/6. [[file:homeworks/03-gaussian-mixture-models.org][Homework 3]]. Gaussian mixture models
-  - SlidesTODO, ESL-14.3.7, MLAPP-11.4.2. [[file:mclust-models.jpg][mclust model names figure]].
+  - [[file:slides/03-gaussian-mixtures.pdf][Slides]], ESL-14.3.7, MLAPP-11.4.2. [[file:mclust-models.jpg][mclust model names figure]].
   - Quiz due Tues Sept 7: mixture 1.
-- Sept 13, Homework 4: Hierarchical Clustering
-  - ESL-14.3.12, MLAPP-25.5.1.
+- Sept 13, [[file:homeworks/04-hierarchical-clustering.org][Homework 4]]: Hierarchical Clustering
+  - SlidesTODO, ESL-14.3.12, MLAPP-25.5.1.
+  - Quizzes Hierarhical 1-3.
 - Sept 20, Homework 5: Clustering model selection
   - Estimating the number of clusters, ESL-14.3.11. Model selection
     for latent variable models, MLAPP-11.5.

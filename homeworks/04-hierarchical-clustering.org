@@ -1,0 +1,74 @@
+Comparing hierarchical clustering with kmeans
+
+1. First use stats::kmeans on the zip.test data set to compute a
+   clustering with K=10 clusters. Using base::system.time, 
+   how much time does it take on your system?
+
+2. Use stats::dist and stats::hclust to compute a hierarchical
+   clustering tree on different sized subsets of the zip.test data set
+   (start with a small number of rows/observations like 100 and
+   increase), then use stats::cutree to compute 10 clusters. Use
+   base::system.time to compute timings of the entire process for each
+   subset size. What is the largest subset / number of observations
+   you can cluster in about the same amount of time as kmeans on the
+   whole data set? (on my system it is about 600, please show the code
+   and timings output on your system)
+
+3. Use microbenchmark::microbenchmark to compute timings for both
+   algorithms (with K=10 clusters), and several zip.test data subset
+   sizes. Make a plot of computation time versus data set size, with
+   each algorithm in a different color (e.g. hclust=red,
+   kmeans=black). What does the plot suggest about the time complexity
+   of each algorithm? (write time complexity in big-O notation in
+   terms of N the data set size)
+    - use a for loop over data set sizes, on a log scale, from 10 to the
+      subset size you found in problem 1. e.g. 10^seq(1, log10(600),
+      l=5).
+    - use the list of data tables idiom and during each iteration of the
+      for loop store a data table with timings from microbenchmark.
+    - use microbenchmark(times=3) to run each algo only three times
+      (instead of the default 100).
+    - use scale_x_log10() and scale_y_log10() in your ggplot -- the
+      different time complexity should show up as lines with different
+      slope.
+
+4. Compare two linkage methods (e.g. single and average, if one of
+   those two does not work for some reason, try another one), for
+   cluster sizes from 1 to 20, on the zip.test data set, in terms of
+   Adjusted Rand Index. Make a plot of ARI versus number of clusters,
+   each linkage method in a different color (e.g. single=black,
+   average=red). What is the best value of ARI that you observed? What
+   linkage method, and how many clusters?
+    - To save time use the same data subset size you found in problem 1.
+    - Use pdfCluster::adj.rand.index to compute the Adjusted Rand Index
+      (ARI) with respect to the true class/digit labels (1 means perfect
+      clustering and values near 0 mean random clusters).
+
+Extra credit (10 points): add kmeans as a third line on the ARI plot
+in problem 4. Is it more or less accurate than hierarchical
+clustering?
+
+Extra credit (10 points): use the ggdendro package to plot the
+dendrograms from problem 4 in a multi-panel ggplot (one panel for each
+linkage method). How similar are the two cluster trees?
+
+Please submit your code along with your figures/plots/graphs and
+commentary in a single PDF.
+
+** For CS599 graduate students only:
+
+Code the Hierarchical clustering algorithm from scratch based on the
+pseudo-code in the textbooks. Start by computing the pairwise distance
+matrix, then recursively join observations/groups until you have the
+desired number of clusters.
+- Write a function HCLUST(data.matrix, K) which computes the
+  clustering. For simplicity, do NOT compute the entire tree; instead
+  your function should return an integer vector of cluster IDs, same
+  as stats::cutree (size=number of observations, entries=from 1 to K).
+- use single linkage method (distance from a group to an observation
+  is the minimum distance over all points in that group).
+- evaluate the accuracy of your result by running your algorithm
+  alongside hclust/cutree on the iris data. Compute/print a
+  contingency/count table, e.g. base::table(ids.from.hclust.cutree,
+  ids.from.your.HCLUST)... does your algorithm compute the same
+  clustering?

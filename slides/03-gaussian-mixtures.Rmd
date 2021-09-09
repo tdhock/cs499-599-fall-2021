@@ -36,7 +36,9 @@ directlabels::direct.label(gg, "smart.grid")
 
 # Visualize iris data without labels
 
-- Let $X\in\mathbb R^{n\times p}$ be the data matrix (input for clustering).
+- Let $X = [x_1 \cdots x_n]^\intercal \in\mathbb R^{n\times p}$ be the
+  data matrix (input for clustering), where $x_i\in\mathbb R^p$ is the
+  input vector for observation $i$.
 - Example iris $n=150$ observations, $p=2$ dimensions.
 
 ```{r results=TRUE}
@@ -538,13 +540,13 @@ vector $x\in\mathbb R^p$, a mean vector $\mu\in\mathbb R^p$, and a
 covariance matrix $S\in\mathbb R^{p\times p}$.
 
 In the E step we update the probability matrix,
-$$T_{ik} \gets \frac{\pi_k f(x_i, \mu_k, S_k)}{\sum_{k=1}^K \pi_k f(x_i, \mu_k, S_k)}$$.
+$$T_{ik} \gets \frac{\pi_k f(x_i, \mu_k, S_k)}{\sum_{k'=1}^K \pi_{k'} f(x_i, \mu_{k'}, S_{k'})}$$.
 
 In the M step we update the cluster parameters, 
 
 - $\pi_k \gets \frac{1}{n}\sum_{i=1}^n T_{i,k}$,
-- $\mu_k \gets \frac{\sum_{i=1}^k T_{i,k} x_i}{\sum_{i=1}^k T_{i,k}}$,
-- $S_k \gets \frac{\sum_{i=1}^k T_{i,k} (x_i-\mu_k)(x_i-\mu_k)^\intercal}{\sum_{i=1}^k T_{i,k}}$ (no constraints).
+- $\mu_k \gets \frac{\sum_{i=1}^n T_{i,k} x_i}{\sum_{i=1}^n T_{i,k}}$,
+- $S_k \gets \frac{\sum_{i=1}^n T_{i,k} (x_i-\mu_k)(x_i-\mu_k)^\intercal}{\sum_{i=1}^n T_{i,k}}$ (no constraints).
 
 ---
 
@@ -560,12 +562,29 @@ $$\max_T \log L(x, \theta, T)$$
   likelihood given the data and other parameters.
 - Covariance constraints affect the $\theta$ update rule. For example
   diagonal covariance update,
-- $S \gets \frac{\sum_{i=1}^k \text{Diag}[T_{i,k} (x_i-\mu_k)(x_i-\mu_k)^\intercal]}{\sum_{i=1}^k T_{i,k}}$ (diagonal constraint).
-- $S_{k,k} = \sum_{i=1}^n T_{i,k} D_{i,k}^2$ where $D\in\mathbb
-  R^{n\times p}$ is the difference matrix $X-\mu_k$. (avoids matrix
-  multiplication, linear rather than quadratic time in feature
-  dimension $p$)
+- $S_k \gets \frac{\sum_{i=1}^n \text{Diag}[T_{i,k} (x_i-\mu_k)(x_i-\mu_k)^\intercal]}{\sum_{i=1}^n T_{i,k}}$ (diagonal constraint).
+- $j$-th entry/feature of $S_k$ is $\sum_{i=1}^n T_{i,k} D_{i,j}^2$
+  where $D\in\mathbb R^{n\times p}$ is the difference matrix
+  $X-\mu_k$. (avoids matrix multiplication, linear rather than
+  quadratic time in feature dimension $p$)
+  
+---
 
+# Numerical issues (underflow)
+
+To avoid numerical issues in EM algorithm we need to
+
+- Use the log density with max probability trick, to avoid non-finite
+  probability values in E step.
+  
+$$T_{ik} \gets \frac{\pi_k f(x_i, \mu_k, S_k)}{\sum_{k'=1}^K \pi_{k'} f(x_i, \mu_{k'}, S_{k'})}$$
+$$\log T_{ik} \gets \log \pi_k + \log f(x_i,\mu_{k'},S_{k'}) - Z$$
+$$Z = M + \log[ e^M \sum_{k'=1}^K \pi_{k'} e^{\log f(x_i,\mu_{k'},S_{k'}) - M} ]$$
+$$M = \max_{k'\in\{1,\dots,K\}} \log f(x_i,\mu_{k'},S_{k'})$$
+
+- Add a small number, $\lambda=10^{-6}$ to the diagonal of the covariance
+  matrix to avoid zero variance in M step, $S_k \gets \frac{\sum_{i=1}^n  T_{i,k}(x_i-\mu_k)(x_i-\mu_k)^\intercal}{\sum_{i=1}^n T_{i,k}} +  \lambda I_p$.
+  
 ---
 
 # EM algo starting with K-means assignments

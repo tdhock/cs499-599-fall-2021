@@ -540,11 +540,31 @@ covariance matrix $S\in\mathbb R^{p\times p}$.
 In the E step we update the probability matrix,
 $$T_{ik} \gets \frac{\pi_k f(x_i, \mu_k, S_k)}{\sum_{k=1}^K \pi_k f(x_i, \mu_k, S_k)}$$.
 
-In the M step we update the cluster parameters,
+In the M step we update the cluster parameters, 
 
 - $\pi_k \gets \frac{1}{n}\sum_{i=1}^n T_{i,k}$,
 - $\mu_k \gets \frac{\sum_{i=1}^k T_{i,k} x_i}{\sum_{i=1}^k T_{i,k}}$,
-- $S_k \gets \frac{\sum_{i=1}^k T_{i,k} (x_i-\mu_k)(x_i-\mu_k)^\intercal}{\sum_{i=1}^k T_{i,k}}$.
+- $S_k \gets \frac{\sum_{i=1}^k T_{i,k} (x_i-\mu_k)(x_i-\mu_k)^\intercal}{\sum_{i=1}^k T_{i,k}}$ (no constraints).
+
+---
+
+# Where do these update rules come from?
+
+The goal of the algorithm is to find model parameters that maximize
+the log likelihood, $\log L(x, \theta, T)$.
+
+$$\max_\theta \log L(x, \theta, T)$$
+$$\max_T \log L(x, \theta, T)$$
+
+- Use gradient condition to derive $T,\theta$ which maximize the
+  likelihood given the data and other parameters.
+- Covariance constraints affect the $\theta$ update rule. For example
+  diagonal covariance update,
+- $S \gets \frac{\sum_{i=1}^k \text{Diag}[T_{i,k} (x_i-\mu_k)(x_i-\mu_k)^\intercal]}{\sum_{i=1}^k T_{i,k}}$ (diagonal constraint).
+- $S_{k,k} = \sum_{i=1}^n T_{i,k} D_{i,k}^2$ where $D\in\mathbb
+  R^{n\times p}$ is the difference matrix $X-\mu_k$. (avoids matrix
+  multiplication, linear rather than quadratic time in feature
+  dimension $p$)
 
 ---
 
@@ -718,6 +738,7 @@ data.and.ellipses()
 update.cluster.params()
 data.and.ellipses()
 ```
+
 ---
 
 # Three clusters, diagonal constraint, random initialization
@@ -761,6 +782,8 @@ data.and.ellipses = function(){
   gg <- ggplot()+
     scale_fill_manual(values=color.code, guide="none")+
     scale_color_manual(values=color.code, guide="none")+
+    scale_x_continuous(limits=c(0, 7))+
+    scale_y_continuous(limits=c(-0.2, 2.5))+
     geom_point(aes(
       Petal.Length, Petal.Width),
       fill="white",
@@ -991,3 +1014,32 @@ update.cluster.params()
 data.and.ellipses()
 ```
 
+---
+
+# Possible Exam Questions
+
+- How many real number parameters in an unconstrained gaussian mixture
+  model for data with $p=5$ features?
+- What hyper-parameter is common to K-means and Gaussian mixtures? (A
+  hyper-parameter is a model choice that must be fixed before running
+  the learning/EM algorithm)
+- What hyper-parameter is unique to Gaussian mixtures?
+- What cluster parameter is common to K-means and Gaussian mixtures?
+- What cluster parameters are present in Gaussian mixtures but not in
+  K-means?
+  
+---
+
+# Possible exam questions 2
+
+- We say K-means uses hard assignment and Gaussian mixtures uses soft
+  assignment -- what values are used in the probability/assignment
+  matrix in each case?
+- The K-means and Gaussian mixtures have similar learning
+  algorithms. What are the main steps in common and what is the
+  difference?
+- In K-means we compute the squared error, and in Gaussian mixtures we
+  compute the negative log likelihood -- these values INCREASE or
+  DECREASE as the number of clusters increase? These values INCREASE
+  or DECREASE as the number of iterations of the learning algorithm
+  increases?

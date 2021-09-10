@@ -22,8 +22,8 @@ Mclust(initialization = list(hcPairs=hcRandomPairs(data.mat)))
    - You can also try using a subset of rows (maybe only 500?) --
      results for some data are better than no result for full data!
    - You can also try using another package that implements Gaussian
-     mixture models, e.g. Rmixmod, mixture, EMCluster, mixtools, bgmm,
-     flexmix.
+     mixture models, e.g. Rmixmod, mixture::gpcm,
+     EMCluster::emcluster, mixtools, bgmm, flexmix.
 2. Use pdfCluster::adj.rand.index to compute the Adjusted Rand Index
    (ARI) with respect to the true class/digit labels (1 means perfect
    clustering and values near 0 mean random clusters). Make a plot of

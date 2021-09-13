@@ -16,9 +16,9 @@ Gaussian mixture models
      default initialization is based on hierarchical clustering
      (quadratic time in the number of observations). Instead try a
      random initializations using 
-#+BEGIN_SRC R
-Mclust(initialization = list(hcPairs=hcRandomPairs(data.mat))) 
-#+END_SRC
+  #+BEGIN_SRC R
+  Mclust(initialization = list(hcPairs=hcRandomPairs(data.mat))) 
+  #+END_SRC
    - You can also try using a subset of rows (maybe only 500?) --
      results for some data are better than no result for full data!
    - You can also try using another package that implements Gaussian

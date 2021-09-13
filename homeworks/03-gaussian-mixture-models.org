@@ -21,6 +21,8 @@ Gaussian mixture models
   #+END_SRC
    - You can also try using a subset of rows (maybe only 500?) --
      results for some data are better than no result for full data!
+   - You can also use if(!is.null(result)) to only store the result from Mclust if it is non-null (and ignore the result otherwise).
+   - You may use set.seed(123456) or some other number, which may affect the random initialization, and whether or not the function returns a valid model.
    - You can also try using another package that implements Gaussian
      mixture models, e.g. Rmixmod, mixture::gpcm,
      EMCluster::emcluster, mixtools, bgmm, flexmix.

@@ -10,13 +10,22 @@ Gaussian mixture models
    likelihood start to look flat?
    - if mclust::Mclust does not work for you (some students reported
      it returns NULL), it may be because your data set is in the wrong
-     format (make sure it is a numeric matrix).
-   - if it is too slow on your computer, try a simpler modelNames
-     parameter, or try using a subset of rows (maybe only 500?) --
+     format (make sure it is a numeric matrix). Or you may try using a
+     simpler covariance matrix (modelNames parameter).
+   - if it is too slow on your computer, it is probably because the
+     default initialization is based on hierarchical clustering
+     (quadratic time in the number of observations). Instead try a
+     random initializations using 
+  #+BEGIN_SRC R
+  Mclust(initialization = list(hcPairs=hcRandomPairs(data.mat))) 
+  #+END_SRC
+   - You can also try using a subset of rows (maybe only 500?) --
      results for some data are better than no result for full data!
+   - You can also use if(!is.null(result)) to only store the result from Mclust if it is non-null (and ignore the result otherwise).
+   - You may use set.seed(123456) or some other number, which may affect the random initialization, and whether or not the function returns a valid model.
    - You can also try using another package that implements Gaussian
-     mixture models, e.g. Rmixmod, mixture, EMCluster, mixtools, bgmm,
-     flexmix.
+     mixture models, e.g. Rmixmod, mixture::gpcm,
+     EMCluster::emcluster, mixtools, bgmm, flexmix.
 2. Use pdfCluster::adj.rand.index to compute the Adjusted Rand Index
    (ARI) with respect to the true class/digit labels (1 means perfect
    clustering and values near 0 mean random clusters). Make a plot of
@@ -53,13 +62,14 @@ textbooks.
   un-necessary off-diagonal entries), you can use base::colSums and
   base::diag.
 - Make a figure that compares the negative log likelihood (NLL) for
-  the two algorithms on the zip data (or use iris data if zip is too
-  slow on your computer). Plot NLL as a function of K (number of
-  clusters), using two random starts for each algorithm (there should
-  be four points plotted per K, with different algorithms in different
-  colors). Are the NLL values from your algorithm similar to those
-  from mclust? Are the values similar between random starts? Does the
-  NLL increase as a function of the number of clusters, as expected?
+  the two algorithms on the iris data (you can try zip data but it is
+  quite large and there are some numerical issues you will have to
+  overcome). Plot NLL as a function of K (number of clusters), using
+  two random starts for each algorithm (there should be four points
+  plotted per K, with different algorithms in different colors). Are
+  the NLL values from your algorithm similar to those from mclust? Are
+  the values similar between random starts? Does the NLL increase as a
+  function of the number of clusters, as expected?
 - To reduce repetition in your code please use three nested
   for loops: (1) K=1 to 20, (2) algorithm=yours or mclust, (3) random
   seed=1 or 2, e.g.

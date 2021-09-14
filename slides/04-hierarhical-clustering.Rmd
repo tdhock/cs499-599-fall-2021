@@ -1,0 +1,475 @@
+---
+title: "Hierarchical Clustering"
+author: "Toby Dylan Hocking"
+output: beamer_presentation
+---
+
+```{r opts, echo=FALSE}
+knitr::opts_chunk$set(
+  echo=FALSE, results=FALSE,
+  fig.width=10,
+  fig.height=6)
+```
+
+# Visualize iris data with labels
+
+```{r}
+library(ggplot2)
+color.code <- c(
+  setosa="#1B9E77",
+  versicolor="#D95F02",
+  virginica="#7570B3",
+  "1"="#E7298A",
+  "2"="#66A61E",
+  "3"="#E6AB02", 
+  "4"="#A6761D")
+iris.dt <- data.table(iris)[(1:150-1) %% 50 < 5]
+gg <- ggplot()+
+  scale_color_manual(values=color.code)+
+  geom_point(aes(
+    Petal.Length, Petal.Width, color=Species),
+    data=iris.dt)+
+  coord_equal()
+directlabels::direct.label(gg, "smart.grid")
+```
+
+---
+
+# Visualize iris data without labels
+
+- Let $X = [x_1 \cdots x_n]^\intercal \in\mathbb R^{n\times p}$ be the
+  data matrix (input for clustering), where $x_i\in\mathbb R^p$ is the
+  input vector for observation $i$.
+- Example iris $n=150$ observations, $p=2$ dimensions.
+
+```{r results=TRUE}
+data.mat <- as.matrix(
+  iris.dt[, c("Petal.Width","Petal.Length")])
+data.mat[1:4,]
+```
+
+```{r fig.height=3}
+theme_set(
+  ##theme_bw()+theme(panel.spacing=grid::unit(0, "lines"))
+  theme_grey()+theme(text=element_text(size=20))
+)
+ggplot()+
+  geom_point(aes(
+    Petal.Length, Petal.Width),
+    data=iris.dt)+
+  coord_equal()
+```
+
+---
+
+# Which pair of rows is most similar?
+
+This is a visualization of 15 rows and two columns from the iris data.
+
+```{r}
+data.mat.dt <- data.table(
+  row=as.integer(row(data.mat)),
+  col=as.integer(col(data.mat)),
+  cm=as.numeric(data.mat))
+revfac <- function(x){
+  factor(x, sort(unique(x), decreasing = TRUE))
+}
+ggplot()+
+  geom_tile(aes(
+    factor(col), revfac(row), fill=cm),
+    data=data.mat.dt)+
+  geom_text(aes(
+    factor(col), revfac(row), label=cm),
+    data=data.mat.dt)+
+  scale_y_discrete("row")+
+  scale_x_discrete("column")+
+  scale_fill_gradient(low="white", high="red")
+```
+
+---
+
+# Hyper-parameter choices (must be fixed prior to learning)
+
+How to compute similarity/distance between rows? 
+
+- Let $x,x'\in\mathbb R^p$ be two feature vectors (rows of data
+  matrix).
+- L1/manhattan distance: $||x-x'||_1 = \sum_{j=1}^p |x_j-x'_j|$.
+- L2/euclidean distance: $||x-x'||_2 = \sqrt{\sum_{j=1}^p (x_j-x'_j)^2}$.
+
+How to compute distance with a group/cluster?
+There are several rules, or agglomeration methods:
+
+- single: min distance from any point,
+- complete: max distance from any point,
+- average: mean distance over all points,
+- there are others.
+
+
+---
+
+# Hierarchical clustering inputs a pairwise distance matrix
+
+```{r}
+library(data.table)
+iris.d <- dist(data.mat)
+iris.d.mat <- as.matrix(iris.d)
+iris.d.dt <- data.table(
+  row=as.integer(row(iris.d.mat)),
+  col=as.integer(col(iris.d.mat)),
+  dist=as.numeric(iris.d.mat))
+ggplot()+
+  geom_tile(aes(
+    factor(col), revfac(row), fill=dist),
+    data=iris.d.dt)+
+  scale_fill_gradient(low="white", high="red")+
+  coord_equal(expand=FALSE)+
+  scale_y_discrete("observation")+
+  scale_x_discrete("observation")
+```
+
+---
+
+# Only need lower triangle (symmetry)
+
+```{r}
+lower.triangle <- iris.d.dt[col<row]
+ggplot()+
+  geom_tile(aes(
+    factor(col), revfac(row), fill=dist),
+    data=lower.triangle)+
+  geom_text(aes(
+    factor(col), revfac(row), label=sprintf("%.2f", dist)),
+    data=lower.triangle)+
+  scale_fill_gradient(low="white", high="red")+
+  coord_equal(expand=FALSE)+
+  scale_y_discrete("observation", limits=paste(nrow(data.mat):1))+
+  scale_x_discrete("observation", limits=factor(1:nrow(data.mat)))
+```
+
+---
+
+# Find the closest pairs
+
+```{r}
+lower.triangle[, min.dist := min(dist)==dist]
+ggplot()+
+  geom_tile(aes(
+    factor(col), revfac(row), fill=dist, color=min.dist),
+    size=0.5,
+    data=lower.triangle)+
+  geom_text(aes(
+    factor(col), revfac(row), label=sprintf("%.2f", dist)),
+    data=lower.triangle)+
+  scale_fill_gradient(low="white", high="red")+
+  scale_color_manual(
+    values=c("TRUE"="black", "FALSE"=NA),
+    guide=guide_legend(override.aes = list(fill=NA)))+
+  coord_equal(expand=FALSE)+
+  scale_y_discrete("observation", limits=paste(nrow(data.mat):1))+
+  scale_x_discrete("observation", limits=factor(1:nrow(data.mat)))
+```
+
+---
+
+# Join one of the closest pairs (iteration 1)
+
+```{r}
+lower.triangle[, to.join := .I %in% which(min.dist)[1] ]
+color.values <- c("TRUE"="black", "FALSE"=NA)
+gg.dist <- function(){
+  ggplot()+
+    ggtitle(paste0("min dist=", lower.triangle[min.dist==TRUE]$dist[1]))+
+    geom_tile(aes(
+      factor(col), revfac(row), fill=dist, color=factor(to.join, names(color.values))),
+      size=0.5,
+      data=lower.triangle)+
+    geom_text(aes(
+      factor(col), revfac(row), label=sprintf("%.2f", dist)),
+      data=lower.triangle)+
+    scale_fill_gradient(low="white", high="red", limits=range(iris.d.dt$dist))+
+    scale_color_manual(
+      "To join",
+      values=color.values,
+      breaks=names(color.values),
+      drop=FALSE,
+      guide=guide_legend(override.aes = list(fill=NA)))+
+    coord_equal(expand=TRUE)+
+    scale_y_discrete("cluster", limits=paste(nrow(data.mat):1))+
+    scale_x_discrete("cluster", limits=factor(1:nrow(data.mat)))
+}
+gg.dist()
+```
+
+---
+
+# iteration 2
+
+```{r}
+do.join <- function(){
+  join.indices <- lower.triangle[to.join==TRUE, c(row,col)]
+  to.remove <- lower.triangle[, row %in% join.indices | col %in% join.indices]
+  old.dt <- lower.triangle[to.remove]
+  old.dt[, other := ifelse(
+    row %in% join.indices, ifelse(
+      col %in% join.indices, NA, col), row)]
+  new.dt <- old.dt[!is.na(other), .(
+    dist=min(dist), N=.N
+  ), by=other]
+  new.dt[, keep := join.indices[1] ]
+  lower.triangle <<- rbind(
+    lower.triangle[!to.remove, data.table(row, col, dist)],
+    new.dt[, data.table(
+      row=ifelse(keep<other, other, keep),
+      col=ifelse(keep<other, keep, other),
+      dist)])
+  lower.triangle[, min.dist := min(dist)==dist]
+  lower.triangle[, to.join := .I %in% which(min.dist)[1] ]
+  gg.dist()
+}
+do.join()
+```
+
+---
+
+# iteration 3
+
+```{r}
+do.join()
+```
+
+---
+
+# iteration 4
+
+```{r}
+do.join()
+```
+
+---
+
+# iteration 5
+
+```{r}
+do.join()
+```
+
+---
+
+# iteration 6
+
+```{r}
+do.join()
+```
+
+---
+
+# iteration 7
+
+```{r}
+do.join()
+```
+
+---
+
+# iteration 8
+
+```{r}
+do.join()
+```
+
+---
+
+# iteration 9
+
+```{r}
+do.join()
+```
+
+---
+
+# iteration 10
+
+```{r}
+do.join()
+```
+
+---
+
+# iteration 11
+
+```{r}
+do.join()
+```
+
+---
+
+# iteration 12
+
+```{r}
+do.join()
+```
+
+---
+
+# iteration 13
+
+```{r}
+do.join()
+```
+
+---
+
+# iteration 14
+
+```{r}
+do.join()
+```
+
+---
+
+# Visualization of dendrogram (tree diagram)
+
+```{r}
+hc.tree <- hclust(iris.d, method="single")
+hc.tree.list <- ggdendro::dendro_data(hc.tree)
+labels.dt <- data.table(hc.tree.list$labels)
+labels.dt[, Species := iris.dt$Species[as.integer(label)] ]
+ggplot()+
+  geom_segment(aes(
+    x, y, xend=xend, yend=yend),
+    data=hc.tree.list[["segments"]])+
+  scale_color_manual(values=color.code)+
+  geom_point(aes(
+    x, y, color=Species),
+    data=labels.dt)+
+  geom_text(aes(
+    x, y, label=label),
+    vjust=1.1,
+    data=labels.dt)+
+  scale_y_continuous(
+    "distance")+
+  scale_x_continuous(
+    "observation",
+    breaks=NULL)
+```
+
+---
+
+# Cutting the tree to get two clusters
+
+```{r}
+cut.dist <- 1
+cluster.vec <- cutree(hc.tree, h=cut.dist)
+labels.dt[, cluster := factor(cluster.vec[as.integer(label)]) ]
+ggplot()+
+  geom_segment(aes(
+    x, y, xend=xend, yend=yend),
+    data=hc.tree.list[["segments"]])+
+  scale_color_manual(values=color.code)+
+  geom_hline(yintercept=cut.dist, size=1)+
+  geom_point(aes(
+    x, y, color=cluster),
+    data=labels.dt)+
+  geom_text(aes(
+    x, y, label=label),
+    vjust=1.1,
+    data=labels.dt)+
+  scale_y_continuous(
+    "distance")+
+  scale_x_continuous(
+    "observation",
+    breaks=NULL)
+```
+
+---
+
+# Cutting the tree to get three clusters
+
+```{r}
+cut.dist <- 0.53
+cluster.vec <- cutree(hc.tree, h=cut.dist)
+labels.dt[, cluster := factor(cluster.vec[as.integer(label)]) ]
+ggplot()+
+  geom_segment(aes(
+    x, y, xend=xend, yend=yend),
+    data=hc.tree.list[["segments"]])+
+  scale_color_manual(values=color.code)+
+  geom_hline(yintercept=cut.dist, size=1)+
+  geom_point(aes(
+    x, y, color=cluster),
+    data=labels.dt)+
+  geom_text(aes(
+    x, y, label=label),
+    vjust=1.1,
+    data=labels.dt)+
+  scale_y_continuous(
+    "distance")+
+  scale_x_continuous(
+    "observation",
+    breaks=NULL)
+```
+
+---
+
+# Cutting the tree to get four clusters
+
+```{r}
+cut.dist <- 0.5
+cluster.vec <- cutree(hc.tree, h=cut.dist)
+labels.dt[, cluster := factor(cluster.vec[as.integer(label)]) ]
+ggplot()+
+  geom_segment(aes(
+    x, y, xend=xend, yend=yend),
+    data=hc.tree.list[["segments"]])+
+  scale_color_manual(values=color.code)+
+  geom_hline(yintercept=cut.dist, size=1)+
+  geom_point(aes(
+    x, y, color=cluster),
+    data=labels.dt)+
+  geom_text(aes(
+    x, y, label=label),
+    vjust=1.1,
+    data=labels.dt)+
+  scale_y_continuous(
+    "distance")+
+  scale_x_continuous(
+    "observation",
+    breaks=NULL)
+```
+
+---
+
+# ARI computation 
+
+```{r}
+cluster.mat <- cutree(hc.tree, 1:nrow(data.mat))
+ari.dt.list <- list()
+for(n.clusters in 1:ncol(cluster.mat)){
+  ARI <- pdfCluster::adj.rand.index(
+    cluster.mat[, n.clusters], iris.dt$Species)
+  ari.dt.list[[n.clusters]] <- data.table(
+    n.clusters,
+    ARI)
+}
+ari.dt <- do.call(rbind, ari.dt.list)
+
+ggplot()+
+  geom_point(aes(
+    n.clusters, ARI),
+    data=ari.dt)
+```
+
+---
+
+# TODO full data set
+
+---
+
+# TODO other choices, compare trees
+
+---
+
+# Possible Exam Questions
+
+TODO

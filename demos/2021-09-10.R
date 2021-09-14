@@ -17,12 +17,21 @@ system.time({
   mclust.result <- mclust::Mclust(
     data.mat, n.clusters, "VVI", verbose=FALSE)
 })
+mclust.time <- system.time({
+  mclust.result <- mclust::Mclust(
+    data.mat, n.clusters, "VVI", verbose=FALSE)
+})
+names(mclust.time)
+str(mclust.time)
+mclust.time[["elapsed"]]
 mclust.result$loglik
 mclust.result$classification
 ?mclust::Mclust
 mclust.options("subset")
 
 big.data.mat <- data.mat[rep(1:nrow(data.mat), 10),]
+nrow(data.mat)
+nrow(big.data.mat)
 str(big.data.mat)
 system.time({
   mclust.result <- mclust::Mclust(
@@ -44,7 +53,8 @@ system.time({
 })
 
 library(data.table)
-(n.data.vec <- as.integer(10^seq(1, 3, by=0.5)))
+(n.data.vec <- as.integer(10^seq(1, 3, by=0.5))) #logarithmic sequence (GOOD for timings experiments)
+seq(10, 1000, l=5) #linear sequence (BAD)
 all.timings.list <- list()
 for(n.data in n.data.vec){
   n.data.mat <- big.data.mat[1:n.data,]
@@ -73,14 +83,15 @@ all.timings[, seconds := time/1e9]
 all.timings[, algorithm := expr]
 
 library(ggplot2)
-ggplot()+
+ggplot()+#linear scale, not super helpful.
   geom_point(aes(
     n.data, seconds, color=algorithm),
     data=all.timings)
 
-ggplot()+
+ggplot()+#log scales, more helpful.
   geom_point(aes(
     n.data, seconds, color=algorithm),
     data=all.timings)+
   scale_x_log10()+
   scale_y_log10()
+#larger asymptotic time complexity appears as larger slopes on the log-log scale.

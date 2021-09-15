@@ -32,17 +32,29 @@ ESL by Hastie, Tibshirani, Friedman
 These provide practical advice about how to write the R code necessary
 for the homeworks.
 
-Impatient R by Burns
-- [[https://www.burns-stat.com/documents/tutorials/impatient-r/][web pages with practical R tutorials]].
-
 Getting Started in R: Tinyverse Edition by Saghir Bashir and Dirk
 Eddelbuettel.
 - [[https://eddelbuettel.github.io/gsir-te/Getting-Started-in-R.pdf][PDF]].
 - [[https://github.com/eddelbuettel/gsir-te][source code]].
 
+Impatient R by Burns
+- [[https://www.burns-stat.com/documents/tutorials/impatient-r/][web pages with practical R tutorials]].
+
+Introductions to data.table (efficient R package for data manipulation).
+- [[https://atrebas.github.io/post/2020-06-17-datatable-introduction/][A gentle introduction to data.table by Atrebas]].
+- Official [[https://cloud.r-project.org/web/packages/data.table/vignettes/datatable-intro.html][datatable-intro vignette]].
+
 Tao Te Programming by Burns
 - [[https://github.com/tdhock/cs499-599-fall-2020/blob/master/Burns.org][selected chapters]] from the book about how to become a good programmmer.
 - [[https://www.burns-stat.com/documents/books/tao-te-programming/][web page with details about how to purchase the full book]].
+
+For CS599 grad students: guides to writing an R package with C/C++
+code.
+- [[https://teuder.github.io/rcpp4everyone_en/][Rcpp for Everyone by Masaki E. Tsuda]].
+- [[https://webhome.phy.duke.edu/~rgb/General/c_book/c_book/][The C book by Mike Banahan, Declan Brady and Mark Doran]].
+- [[https://github.com/tdhock/when-c][When and how to write low-level (C/C++) instead of high-level (R/Python) code?]]
+- [[https://www.youtube.com/playlist?list=PLwc48KSH3D1OkObQ22NHbFwEzof2CguJJ][Make an R package with C++ code]], my tutorial screencast videos.
+- [[https://r-pkgs.org/][R packages]] book by Wickham.
 
 ** Weekly schedule of Homeworks and reading
 

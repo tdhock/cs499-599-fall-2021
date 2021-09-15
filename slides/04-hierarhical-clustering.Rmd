@@ -462,14 +462,23 @@ ggplot()+
 
 ---
 
-# TODO full data set
-
----
-
-# TODO other choices, compare trees
-
----
-
 # Possible Exam Questions
 
-TODO
+What is the big O notation asymptotic time complexity of the following
+algorithms in terms of N (number of data observations/rows), P (number
+of data features/columns), and K (number of clusters).
+
+- K-means.
+- Gaussian mixture model with diagonal covariance matrix.
+- Gaussian mixture model with unconstrained covariance matrix.
+- Hierarchical clustering with single linkage.
+
+---
+
+# Possible Exam Questions 2
+
+- What are the two hyper-parameters that must be chosen before running
+  the hierarchical clustering algorithm?
+- For a data set with N=200 observations/rows, how large is the
+  pairwise distance matrix? How many iterations of the cluster joining
+  occur?

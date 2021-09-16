@@ -7,6 +7,7 @@ dist.mat <- stats::dist(data.mat)
 N <- nrow(data.mat)
 N
 N*(N-1)/2 #number of pairs of N objects.
+str(dist.mat)
 
 linkage.list <- list("single", "complete")
 hclust.err.values.list <- list()

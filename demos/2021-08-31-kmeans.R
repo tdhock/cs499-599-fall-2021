@@ -25,3 +25,5 @@ dist.dt <- data.table(expand.grid(
   centers.i=1:nrow(centers.dt),
   data.i=1:nrow(data.dt)))
 dist.dt[, error := rowSums((data.mat[data.i,]-centers.mat[centers.i,])^2)]
+
+anRpackage::rcpp_hello_world(data.mat, centers.mat) # all ones, bug?

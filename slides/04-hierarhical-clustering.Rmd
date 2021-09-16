@@ -164,7 +164,7 @@ ggplot()+
     data=lower.triangle)+
   scale_fill_gradient(low="white", high="red")+
   scale_color_manual(
-    values=c("TRUE"="black", "FALSE"=NA),
+    values=c("TRUE"="black", "FALSE"="transparent"),
     guide=guide_legend(override.aes = list(fill=NA)))+
   coord_equal(expand=FALSE)+
   scale_y_discrete("observation", limits=paste(nrow(data.mat):1))+
@@ -177,12 +177,13 @@ ggplot()+
 
 ```{r}
 lower.triangle[, to.join := .I %in% which(min.dist)[1] ]
-color.values <- c("TRUE"="black", "FALSE"=NA)
+color.values <- c("TRUE"="black", "FALSE"="transparent")
 gg.dist <- function(){
   ggplot()+
     ggtitle(paste0("min dist=", lower.triangle[min.dist==TRUE]$dist[1]))+
     geom_tile(aes(
-      factor(col), revfac(row), fill=dist, color=factor(to.join, names(color.values))),
+      factor(col), revfac(row), fill=dist,
+      color=factor(to.join, names(color.values))),
       size=0.5,
       data=lower.triangle)+
     geom_text(aes(
@@ -340,7 +341,7 @@ ggplot()+
   geom_segment(aes(
     x, y, xend=xend, yend=yend),
     data=hc.tree.list[["segments"]])+
-  scale_color_manual(values=color.code)+
+  scale_color_manual(values=color.code[paste(unique(labels.dt$Species))])+
   geom_point(aes(
     x, y, color=Species),
     data=labels.dt)+
@@ -367,7 +368,7 @@ ggplot()+
   geom_segment(aes(
     x, y, xend=xend, yend=yend),
     data=hc.tree.list[["segments"]])+
-  scale_color_manual(values=color.code)+
+  scale_color_manual(values=color.code[paste(unique(labels.dt$cluster))])+
   geom_hline(yintercept=cut.dist, size=1)+
   geom_point(aes(
     x, y, color=cluster),
@@ -395,7 +396,7 @@ ggplot()+
   geom_segment(aes(
     x, y, xend=xend, yend=yend),
     data=hc.tree.list[["segments"]])+
-  scale_color_manual(values=color.code)+
+  scale_color_manual(values=color.code[paste(unique(labels.dt$cluster))])+
   geom_hline(yintercept=cut.dist, size=1)+
   geom_point(aes(
     x, y, color=cluster),
@@ -423,7 +424,7 @@ ggplot()+
   geom_segment(aes(
     x, y, xend=xend, yend=yend),
     data=hc.tree.list[["segments"]])+
-  scale_color_manual(values=color.code)+
+  scale_color_manual(values=color.code[paste(unique(labels.dt$cluster))])+
   geom_hline(yintercept=cut.dist, size=1)+
   geom_point(aes(
     x, y, color=cluster),

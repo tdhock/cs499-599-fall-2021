@@ -50,7 +50,9 @@ clustering?
 
 Extra credit (10 points): use the ggdendro package to plot the
 dendrograms from problem 4 in a multi-panel ggplot (one panel for each
-linkage method). How similar are the two cluster trees?
+linkage method). Make sure to include a geom_point with the class
+labels in different colors, so you can visually judge the accuracy of
+the clustering trees. How similar are the two cluster trees?
 
 Please submit your code along with your figures/plots/graphs and
 commentary in a single PDF.

@@ -32,17 +32,29 @@ ESL by Hastie, Tibshirani, Friedman
 These provide practical advice about how to write the R code necessary
 for the homeworks.
 
-Impatient R by Burns
-- [[https://www.burns-stat.com/documents/tutorials/impatient-r/][web pages with practical R tutorials]].
-
 Getting Started in R: Tinyverse Edition by Saghir Bashir and Dirk
 Eddelbuettel.
 - [[https://eddelbuettel.github.io/gsir-te/Getting-Started-in-R.pdf][PDF]].
 - [[https://github.com/eddelbuettel/gsir-te][source code]].
 
+Impatient R by Burns
+- [[https://www.burns-stat.com/documents/tutorials/impatient-r/][web pages with practical R tutorials]].
+
+Introductions to data.table (efficient R package for data manipulation).
+- [[https://atrebas.github.io/post/2020-06-17-datatable-introduction/][A gentle introduction to data.table by Atrebas]].
+- Official [[https://cloud.r-project.org/web/packages/data.table/vignettes/datatable-intro.html][datatable-intro vignette]].
+
 Tao Te Programming by Burns
 - [[https://github.com/tdhock/cs499-599-fall-2020/blob/master/Burns.org][selected chapters]] from the book about how to become a good programmmer.
 - [[https://www.burns-stat.com/documents/books/tao-te-programming/][web page with details about how to purchase the full book]].
+
+For CS599 grad students: guides to writing an R package with C/C++
+code.
+- [[https://teuder.github.io/rcpp4everyone_en/][Rcpp for Everyone by Masaki E. Tsuda]].
+- [[https://webhome.phy.duke.edu/~rgb/General/c_book/c_book/][The C book by Mike Banahan, Declan Brady and Mark Doran]].
+- [[https://github.com/tdhock/when-c][When and how to write low-level (C/C++) instead of high-level (R/Python) code?]]
+- [[https://www.youtube.com/playlist?list=PLwc48KSH3D1OkObQ22NHbFwEzof2CguJJ][Make an R package with C++ code]], my tutorial screencast videos.
+- [[https://r-pkgs.org/][R packages]] book by Wickham.
 
 ** Weekly schedule of Homeworks and reading
 
@@ -51,17 +63,15 @@ To do the homeworks you need to install [[https://cloud.r-project.org/][the most
 (for students who already know/use emacs, or who want to learn, [[https://www.youtube.com/playlist?list=PLwc48KSH3D1Onsed66FPLywMSIQmAhUYJ][my
 emacs tutorials]]).
 
-[[https://drive.google.com/drive/folders/1PeTZJ29HRTM6BrsHTSHAdDfwZit8yA-P?usp=sharing][Folder of all class recordings and code demos (useful for homework)
-from last year on google drive]]. Yes you can copy and modify these code
-demos for your homework, since they are a part of the class
+[[https://drive.google.com/drive/folders/1PeTZJ29HRTM6BrsHTSHAdDfwZit8yA-P?usp=sharing][Folder of all class recordings and code demos from last year]]. [[file:demos/][Folder
+with all code demos from this year]]. Yes you can copy and modify these
+code demos for your homework, since they are a part of the class
 material. But in general, copying code for your homework, from
 classmates or internet sources, is strictly forbidden and will be
 pursued as an academic integrity violation.
 
 [[https://docs.google.com/document/d/1W6-HdQLgHayOFXaQtscO5J5yf05G7E6KeXyiBJFcT7A/edit?usp=sharing][This General Usage Rubric]] will be used to grade the code
 quality/style/efficiency in each of your homeworks.
-
-[[file:demos/][Folder with all code demos from this year]].
 
 Homework topics and readings for each week are listed below. The date
 of the Monday of each week is written. Each homework is due Friday of

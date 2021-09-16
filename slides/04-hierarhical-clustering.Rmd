@@ -23,6 +23,7 @@ color.code <- c(
   "2"="#66A61E",
   "3"="#E6AB02", 
   "4"="#A6761D")
+library(data.table)
 iris.dt <- data.table(iris)[(1:150-1) %% 50 < 5]
 gg <- ggplot()+
   scale_color_manual(values=color.code)+
@@ -461,6 +462,145 @@ ggplot()+
 ```
 
 ---
+
+# Another 2d data set
+
+```{r}
+data(spirals, package="kernlab")
+spirals.dt <- data.table(spirals)
+ggplot()+
+  geom_point(aes(
+    V1, V2),
+    data=spirals.dt)+
+  coord_equal()
+```
+
+---
+
+# K-means fails
+
+```{r}
+kmeans.result <- kmeans(spirals, 2)
+spirals.dt[, cluster := factor(kmeans.result$cluster) ]
+ggplot()+
+  geom_point(aes(
+    V1, V2, color=cluster),
+    data=spirals.dt)+
+  coord_equal()
+```
+
+---
+
+# Hierarchical with two clusters fails
+
+```{r}
+spirals.dist <- dist(spirals)
+spirals.plot <- function(n.clusters){
+  spirals.hc.list <- list()
+  for(linkage in c("single", "average", "complete", "median", "centroid", "ward.D", "ward.D2", "mcquitty")){
+    hc.tree <- hclust(spirals.dist, linkage)
+    spirals.dt[, cluster := factor(cutree(hc.tree, k=n.clusters)) ]
+    spirals.hc.list[[linkage]] <- data.table(
+      linkage, spirals.dt)
+  }
+  spirals.hc <- do.call(rbind, spirals.hc.list)
+  ggplot()+
+    geom_point(aes(
+      V1, V2, color=cluster),
+      data=spirals.hc)+
+    coord_equal()+
+    facet_wrap("linkage", labeller=label_both, nrow=2)
+}
+spirals.plot(2)
+```
+
+---
+
+# Hierarchical with single linkage and 3 clusters better
+
+```{r}
+spirals.plot(3)
+```
+
+---
+
+# Gene expression clustering (cancer classes)
+
+Small Round Blue Cell Tumors (SRBCT) of childhood cancer study of Khan
+et al. (2001).
+
+```{r}
+## https://rdrr.io/cran/plsgenomics/man/SRBCT.html
+data(SRBCT, package='plsgenomics')
+code.dt <- nc::capture_all_str(
+  "29 cases of Ewing sarcoma (EWS), coded 1, 11 cases of Burkitt lymphoma (BL), coded 2, 18 cases of neuroblastoma (NB), coded 3, 25 cases of rhabdomyosarcoma (RMS), coded 4. A total of 63 training samples and 25 test samples are provided in Khan et al. (2001). Five of the test set are non-SRBCT and are not considered here.",
+  "cases of ",
+  name=".*?",
+  " [(]",
+  abbrev=".*?",
+  "[)], coded ",
+  code="[1-4]")
+SRBCT.dt <- with(SRBCT, data.table(
+  sample=as.integer(row(X)),
+  gene=as.integer(col(X)),
+  cancer.class=code.dt[, factor(Y, code, name)],
+  expression=as.numeric(X)
+))
+
+ggplot()+
+  geom_raster(aes(
+    gene, sample, fill=log10(expression)),
+    data=SRBCT.dt)+
+  scale_fill_gradient(low="white", high="red")
+```
+
+---
+
+# Clustering samples
+
+```{r}
+data.list <- with(SRBCT, list(
+  sample=X,
+  gene=t(X)
+))
+dist.list <- lapply(data.list, dist)
+hc.list <- lapply(dist.list, hclust, "average")
+ggd.list <- lapply(hc.list, ggdendro::dendro_data)
+
+dim.seg.dt.list <- list()
+for(dim.name in names(data.list)){
+  ggd <- ggd.list[[dim.name]]
+  label.dt <- data.table(ggd[["labels"]])
+  dim.seg.dt <- data.table(ggd[["segments"]])
+  other.name <- names(data.list)[names(data.list) != dim.name]
+  other.max <- nrow(ggd.list[[other.name]][["labels"]])
+  max.dist <- dim.seg.dt[, max(c(y,yend))]
+  norm <- function(y)0.1*other.max*y/max.dist
+  dim.seg.dt[, norm.y := norm(y) ]
+  dim.seg.dt[, norm.yend := norm(yend) ]
+  orig.dt <- data.table(label=paste(SRBCT.dt[[dim.name]]))
+  set(
+    SRBCT.dt,
+    j=paste0(dim.name, ".ord"),
+    value=label.dt[orig.dt, x, on="label"])
+  dim.seg.dt.list[[dim.name]] <- dim.seg.dt
+}
+
+ggplot()+
+  geom_raster(aes(
+    gene.ord, sample.ord, fill=log10(expression)),
+    data=SRBCT.dt)+
+  scale_fill_gradient(low="white", high="red")+
+  geom_segment(aes(
+    x, -norm.y,
+    xend=xend, yend=-norm.yend),
+    data=dim.seg.dt.list[["gene"]])+
+  geom_segment(aes(
+    y=x, x=-norm.y,
+    yend=xend, xend=-norm.yend),
+    data=dim.seg.dt.list[["sample"]])
+    
+```
 
 # Possible Exam Questions
 

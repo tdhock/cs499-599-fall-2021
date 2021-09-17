@@ -1,0 +1,71 @@
+R package coding project for CS599 graduate students ONLY
+
+The goal of this project is to provide you with experience in
+testing/documenting/distributing your code as a free/open-source R
+package, as well as writing efficient C/C++ code.
+
+To figure out how to write an R package, you can read the free
+online book [[https://r-pkgs.org/][R packages]].
+
+You need to select at least two functions that you coded in previous
+coding projects to include in your R package. (e.g. KMEANS and HCLUST)
+
+For each function you need to
+- provide documentation that includes example code that shows how to
+  use it. You can either [[https://cran.r-project.org/doc/manuals/r-release/R-exts.html#Rd-format][write the Rd files yourself]], or use a
+  documentation generation system like [[https://r-pkgs.org/man.html][roxygen2]]/[[http://inlinedocs.r-forge.r-project.org/][inlinedocs]].
+- write at least one [[https://r-pkgs.org/tests.html][test]] to make sure it returns a reasonable result
+  (e.g. it returns an integer vector with same length as the number of
+  rows of the input, and all values from 1 to the specified number of
+  clusters).
+
+One of the two functions should be implmented in C/C++ code with an
+Rcpp interface. For examples see the aum_sort and aum_map C/C++
+functions in my [[https://github.com/tdhock/aum][aum]] package.
+- src/your_algo.h should define a function prototype and return/error
+  status codes. Use different positive integer values to indicate
+  different types of errors.
+- src/your_algo.cpp should define a standard (non-Rcpp) C/C++ function
+  which returns an integer status code (0 for success, errors as
+  defined in your header file). It should use standard (non-Rcpp) types
+  as input arguments, for example double* to pass the data, and int to
+  pass the length of the data.
+- src/interface.cpp should have an interface function with
+  input/output Rcpp types, and which calls the function you defined in
+  src/your_algo.cpp. This file should contain declarations,
+  #+begin_src C++
+  #include <Rcpp.h>
+  #include "your_algo.h"
+  // [[Rcpp::export]]
+  #+end_src
+- Don't forget to run =Rcpp::compileAttributes("path/to/yourPkg")=
+  which looks for the exported functions in yourPkg/src/*.cpp and
+  writes corresponding files: =yourPkg/src/RcppExports.cpp= and
+  =yourPkg/R/RcppExports.R= (which are required to use your C++ code).
+
+You need to upload your code to a GitHub repository (you need a free
+GitHub account so please create one if you don't have one yet). Your
+repo should NOT include any files except source code/docs/tests/etc
+required to build the package (e.g. you will get minus points if there
+is a .Rhistory file in your github repo).
+
+You need to setup [[https://orchid00.github.io/actions_sandbox/packageci.html#actions-for-continuous-integration-checks][GitHub Actions for continuous integration checks]] of
+your R package. This will run the standard package checks, and your
+tests, every time you push new commits to GitHub. Make sure that your
+package passes checks with no WARNINGs and no ERRORs (but NOTEs are
+OK).
+
+You should write a README.md or README.org file that includes at least
+two sections (1) Installation which explains how to install your
+package via remotes::install_github("username/repo") and (2) Usage
+which shows a few lines of R code about how to use your package (can
+be same as examples).
+
+Please upload a PDF with
+- a link to your github repository,
+  e.g. https://github.com/tdhock/nc
+- a link to your most recent GitHub Actions run, 
+  e.g. https://github.com/tdhock/nc/actions/runs/1062594950
+- code/results from the R terminal from running examples for your
+  functions. e.g. example("KMEANS", package="yourPkg") + results.
+

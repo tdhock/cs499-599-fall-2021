@@ -95,7 +95,7 @@ that week, 11:59PM.
 - Sept 20, Homework 5: Clustering model selection
   - Estimating the number of clusters, ESL-14.3.11. Model selection
     for latent variable models, MLAPP-11.5.
-- Sept 27, Review and exam
+- Sept 27, Review and exam, [[file:homeworks/Rpkg.org][grad student R package coding project 1 due]].
 - Oct 4, Homework 6: Binary segmentation
   - Intro to changepoint detection [[https://arxiv.org/pdf/1801.00718.pdf][Truong et al]]. sections 1-2. Binary
     segmentation. Section 5.2.2. Estimating the number of changes. section 6.
@@ -114,10 +114,9 @@ that week, 11:59PM.
 - Nov 15, Homework 11: Auto-encoders
   - Deep generative models, MLAPP-28.2 to 28.3. Deep auto-encoders,
     MLAPP-28.3.2. MLAPP-28.4.2 to 28.4.3.
-- Nov 22, Thanksgiving 11/25-26. Homework 12. T-SNE.
-- Nov 29, Reading week.
+- Nov 22, Thanksgiving 11/25-26. Homework 12. T-SNE or Self-organizing maps?
+- Nov 29, Reading week, [[file:homeworks/Rpkg.org][grad student R package coding project 2 due]].
 - Final exams. CS499 Mon Dec 6, 7:30-9:30. CS599 Thurs Dec 9, 7:30-9:30.
-- [[file:homeworks/Rpkg.org][Grad student R package coding project description.]] 
 
 ** General Questions and Answers (FAQ)
 

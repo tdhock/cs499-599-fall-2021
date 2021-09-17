@@ -1,0 +1,427 @@
+---
+title: "Clustering Model Selection"
+author: "Toby Dylan Hocking"
+output: beamer_presentation
+---
+
+```{r opts, echo=FALSE}
+knitr::opts_chunk$set(
+  echo=FALSE, results=FALSE,
+  fig.width=10,
+  fig.height=6)
+```
+
+# Three normal densities
+
+```{r}
+library(data.table)
+library(ggplot2)
+N.per.cluster <- 20
+sim.dt.list <- list()
+grid.vec <- seq(0, 4, l=501)
+cluster.sd <- 0.2
+density.dt.list <- list()
+n.clusters <- 3
+set.seed(1)
+for(cluster.i in 1:n.clusters){
+  density.dt.list[[cluster.i]] <- data.table(
+    cluster=factor(cluster.i),
+    distribution="true",
+    feature=grid.vec,
+    density=dnorm(grid.vec, cluster.i, cluster.sd))
+  sim.dt.list[[cluster.i]] <- data.table(
+    cluster=factor(cluster.i),
+    feature=rnorm(N.per.cluster, cluster.i, cluster.sd))
+}
+density.dt <- do.call(rbind, density.dt.list)
+sim.dt <- do.call(rbind, sim.dt.list)
+gg <- ggplot()+
+  geom_line(aes(
+    feature, density, group=cluster, color=cluster),
+    data=density.dt)
+gg
+```
+
+---
+
+# Mixture density
+
+```{r}
+total.density <- density.dt[, .(
+  density=mean(density)
+), by=.(distribution, feature)]
+dist.colors <- c(true="black", model="red")
+gg <- ggplot()+
+  scale_color_manual(values=dist.colors)+
+  geom_line(aes(
+    feature, density, color=distribution),
+    data=total.density)
+gg
+```
+
+---
+
+# Generate 20 random data from each density
+
+```{r}
+sim.dt[, y := 0]
+gg.points <- gg+
+  geom_point(aes(
+    feature, y),
+    shape=1,
+    data=sim.dt)
+gg.points
+```
+
+---
+
+# Fit gaussian mixture model 1
+
+```{r}
+library(mclust)
+plot.k <- function(k){
+  fit <- mclust::Mclust(sim.dt$feature, k, "E", verbose=FALSE)
+  model.dt <- data.table(
+    distribution="model",
+    feature=grid.vec,
+    density=mclust::dens(
+      fit$modelName, grid.vec, parameters=fit$parameters))
+  gg.points+
+    coord_cartesian(ylim=c(min(set.y), 4))+
+    xlab("feature")+
+    ylab("density")+
+    geom_line(aes(
+      feature, density, color=distribution),
+      data=model.dt)
+}
+plot.k(1)
+```
+
+---
+
+# Fit gaussian mixture model 2
+
+```{r}
+plot.k(2)
+```
+
+---
+
+# Fit gaussian mixture model 3
+
+```{r}
+plot.k(3)
+```
+
+---
+
+# Fit gaussian mixture model 4
+
+```{r}
+plot.k(4)
+```
+
+---
+
+# Fit gaussian mixture model 5
+
+```{r}
+plot.k(5)
+```
+
+---
+
+# Fit gaussian mixture model 10
+
+```{r}
+plot.k(10)
+```
+
+---
+
+# Fit gaussian mixture model 1
+
+```{r}
+library(mclust)
+plot.k <- function(k){
+  fit <- mclust::Mclust(sim.dt$feature, k, "E", verbose=FALSE)
+  model.dt <- data.table(
+    distribution="model",
+    feature=grid.vec,
+    density=mclust::dens(
+      fit$modelName, grid.vec, parameters=fit$parameters))
+  seg.dt <- data.table(
+    distribution="model",
+    feature=sim.dt$feature,
+    density=mclust::dens(
+      fit$modelName, sim.dt$feature, parameters=fit$parameters))    
+  lik.dt <- data.table(
+    log.lik=sum(mclust::dens(
+      fit$modelName, sim.dt$feature, parameters=fit$parameters, log=TRUE)))
+  ggplot()+
+    coord_cartesian(ylim=c(min(set.y), 4))+
+    xlab("feature")+
+    ylab("density")+
+    geom_text(aes(
+      min(sim.dt$feature)-0.1, 0, label=sprintf("log(lik)=%.2f", log.lik)),
+      hjust=1,
+      vjust=1,
+      data=lik.dt)+
+    geom_point(aes(
+      feature, y),
+      shape=1,
+      data=sim.dt)+
+    geom_segment(aes(
+      feature, 0,
+      xend=feature, yend=density),
+      data=seg.dt)+
+    geom_line(aes(
+      feature, density, color=distribution),
+      data=model.dt)
+}
+plot.k(1)
+```
+
+---
+
+# Fit gaussian mixture model 2
+
+```{r}
+plot.k(2)
+```
+
+---
+
+# Fit gaussian mixture model 3
+
+```{r}
+plot.k(3)
+```
+
+---
+
+# Fit gaussian mixture model 4
+
+```{r}
+plot.k(4)
+```
+
+---
+
+# Fit gaussian mixture model 5
+
+```{r}
+plot.k(5)
+```
+
+---
+
+# Fit gaussian mixture model 10
+
+```{r}
+plot.k(10)
+```
+
+---
+
+# Divide into train and validation
+
+```{r}
+set.y <- c(train=1, validation=2)*-0.15
+set.seed(1)
+sim.dt[, set := rep(names(set.y), l=.N)]
+sim.train <- sim.dt[set=="train"]
+set.dt <- data.table(
+  set=names(set.y),
+  y=set.y)
+gg <- ggplot()+
+  xlab("feature")+
+  ylab("density")+
+  coord_cartesian(ylim=c(min(set.y), 4))+
+  geom_text(aes(
+    0.5, y, label=set),
+    data=set.dt)+
+  geom_point(aes(
+    feature, set.y[set]),
+    shape=1,
+    data=sim.dt)
+gg
+```
+
+---
+
+# Fit gaussian mixture model 1
+
+```{r}
+library(mclust)
+lik.dt.list <- list()
+plot.k <- function(n.clusters){
+  fit <- mclust::Mclust(sim.train$feature, n.clusters, "E", verbose=FALSE)
+  model.dt <- data.table(
+    distribution="model",
+    feature=grid.vec,
+    density=mclust::dens(
+      fit$modelName, grid.vec, parameters=fit$parameters))
+  lik.dt <- sim.dt[, data.table(
+    log.lik=sum(mclust::dens(
+      fit$modelName, feature, parameters=fit$parameters, log=TRUE))
+  ), by=set]
+  lik.dt.list[[paste(n.clusters)]] <<- data.table(
+    n.clusters, lik.dt)
+  gg+
+    geom_text(aes(
+      4, set.y[set], label=sprintf("log(lik)=%.2f", log.lik)),
+      hjust=1,
+      data=lik.dt)+
+    geom_line(aes(
+      feature, density, color=distribution),
+      data=model.dt)
+}
+plot.k(1)
+```
+
+---
+
+# Fit gaussian mixture model 2 
+
+```{r}
+plot.k(2)
+```
+
+---
+
+# Fit gaussian mixture model 3
+
+```{r}
+plot.k(3)
+```
+
+---
+
+# Fit gaussian mixture model 4
+
+```{r}
+plot.k(4)
+```
+
+---
+
+# Fit gaussian mixture model 5
+ 
+```{r}
+plot.k(5)
+```
+
+---
+
+# Fit gaussian mixture model 6
+ 
+```{r}
+plot.k(6)
+```
+
+---
+
+# Fit gaussian mixture model 7
+ 
+```{r}
+plot.k(7)
+```
+
+---
+
+# Fit gaussian mixture model 8
+ 
+```{r}
+plot.k(8)
+```
+
+---
+
+# Fit gaussian mixture model 9
+ 
+```{r}
+plot.k(9)
+```
+
+---
+
+# Fit gaussian mixture model 10
+
+```{r}
+plot.k(10)
+```
+
+---
+
+# Overall log likelihood plot
+
+```{r}
+lik.dt <- do.call(rbind, lik.dt.list)
+best.dt <- lik.dt[, .SD[which.max(log.lik)], by=set]
+best.dt[, point := "min"]
+gg <- ggplot()+
+  geom_line(aes(
+    n.clusters, -log.lik, color=set),
+    data=lik.dt)+
+  scale_fill_manual(values=c(min="white"))+
+  geom_point(aes(
+    n.clusters, -log.lik, color=set, fill=point),
+    shape=21,
+    data=best.dt)+
+  scale_x_continuous(
+    breaks=unique(lik.dt$n.clusters),
+    limits=c(1, 11))
+directlabels::direct.label(gg, "right.polygons")
+```
+
+---
+
+# Visualize iris data with labels
+
+```{r}
+color.code <- c(
+  setosa="#1B9E77",
+  versicolor="#D95F02",
+  virginica="#7570B3",
+  "1"="#E7298A",
+  "2"="#66A61E",
+  "3"="#E6AB02", 
+  "4"="#A6761D")
+iris.dt <- data.table(iris)
+gg <- ggplot()+
+  scale_color_manual(values=color.code)+
+  geom_point(aes(
+    Petal.Length, Petal.Width, color=Species),
+    data=iris.dt)+
+  coord_equal()
+directlabels::direct.label(gg, "smart.grid")
+```
+
+---
+
+# Visualize iris data without labels
+
+- Let $X = [x_1 \cdots x_n]^\intercal \in\mathbb R^{n\times p}$ be the
+  data matrix (input for clustering), where $x_i\in\mathbb R^p$ is the
+  input vector for observation $i$.
+- Example iris $n=150$ observations, $p=2$ dimensions.
+
+```{r results=TRUE}
+data.mat <- as.matrix(
+  iris.dt[, c("Petal.Width","Petal.Length")])
+data.mat[1:4,]
+```
+
+```{r fig.height=3}
+theme_set(
+  ##theme_bw()+theme(panel.spacing=grid::unit(0, "lines"))
+  theme_grey()+theme(text=element_text(size=20))
+)
+ggplot()+
+  geom_point(aes(
+    Petal.Length, Petal.Width),
+    data=iris.dt)+
+  coord_equal()
+```
+

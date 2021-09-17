@@ -164,7 +164,7 @@ ggplot()+
     data=lower.triangle)+
   scale_fill_gradient(low="white", high="red")+
   scale_color_manual(
-    values=c("TRUE"="black", "FALSE"=NA),
+    values=c("TRUE"="black", "FALSE"="transparent"),
     guide=guide_legend(override.aes = list(fill=NA)))+
   coord_equal(expand=FALSE)+
   scale_y_discrete("observation", limits=paste(nrow(data.mat):1))+
@@ -177,12 +177,13 @@ ggplot()+
 
 ```{r}
 lower.triangle[, to.join := .I %in% which(min.dist)[1] ]
-color.values <- c("TRUE"="black", "FALSE"=NA)
+color.values <- c("TRUE"="black", "FALSE"="transparent")
 gg.dist <- function(){
   ggplot()+
     ggtitle(paste0("min dist=", lower.triangle[min.dist==TRUE]$dist[1]))+
     geom_tile(aes(
-      factor(col), revfac(row), fill=dist, color=factor(to.join, names(color.values))),
+      factor(col), revfac(row), fill=dist,
+      color=factor(to.join, names(color.values))),
       size=0.5,
       data=lower.triangle)+
     geom_text(aes(
@@ -340,7 +341,7 @@ ggplot()+
   geom_segment(aes(
     x, y, xend=xend, yend=yend),
     data=hc.tree.list[["segments"]])+
-  scale_color_manual(values=color.code)+
+  scale_color_manual(values=color.code[paste(unique(labels.dt$Species))])+
   geom_point(aes(
     x, y, color=Species),
     data=labels.dt)+
@@ -367,7 +368,7 @@ ggplot()+
   geom_segment(aes(
     x, y, xend=xend, yend=yend),
     data=hc.tree.list[["segments"]])+
-  scale_color_manual(values=color.code)+
+  scale_color_manual(values=color.code[paste(unique(labels.dt$cluster))])+
   geom_hline(yintercept=cut.dist, size=1)+
   geom_point(aes(
     x, y, color=cluster),
@@ -395,7 +396,7 @@ ggplot()+
   geom_segment(aes(
     x, y, xend=xend, yend=yend),
     data=hc.tree.list[["segments"]])+
-  scale_color_manual(values=color.code)+
+  scale_color_manual(values=color.code[paste(unique(labels.dt$cluster))])+
   geom_hline(yintercept=cut.dist, size=1)+
   geom_point(aes(
     x, y, color=cluster),
@@ -423,7 +424,7 @@ ggplot()+
   geom_segment(aes(
     x, y, xend=xend, yend=yend),
     data=hc.tree.list[["segments"]])+
-  scale_color_manual(values=color.code)+
+  scale_color_manual(values=color.code[paste(unique(labels.dt$cluster))])+
   geom_hline(yintercept=cut.dist, size=1)+
   geom_point(aes(
     x, y, color=cluster),
@@ -463,6 +464,22 @@ ggplot()+
 
 ---
 
+# distance plot
+
+```{r}
+N <- nrow(data.mat)
+after.dist <- data.table(
+  join.dist=hc.tree$height,
+  before=N:2,
+  clusters=seq(N-1, 1))
+ggplot()+
+  geom_point(aes(
+    clusters, join.dist),
+    data=after.dist)
+```
+
+---
+
 # Another 2d data set
 
 ```{r}
@@ -495,10 +512,25 @@ ggplot()+
 
 ```{r}
 spirals.dist <- dist(spirals)
+linkage.vec <- c(
+  "single", "average", "complete", "median",
+  "centroid", "ward.D", "ward.D2", "mcquitty")
+spirals.tree.list <- list()
+N <- nrow(spirals)
+spirals.dplot.list <- list()
+for(linkage in linkage.vec){
+  hc.tree <- hclust(spirals.dist, linkage)
+  spirals.tree.list[[linkage]] <- hc.tree
+  spirals.dplot.list[[linkage]] <- data.table(
+    linkage,
+    join.dist=hc.tree$height,
+    clusters=seq(N-1, 1))
+}
+spirals.dplot <- do.call(rbind, spirals.dplot.list)
 spirals.plot <- function(n.clusters){
   spirals.hc.list <- list()
-  for(linkage in c("single", "average", "complete", "median", "centroid", "ward.D", "ward.D2", "mcquitty")){
-    hc.tree <- hclust(spirals.dist, linkage)
+  for(linkage in linkage.vec){
+    hc.tree <- spirals.tree.list[[linkage]]
     spirals.dt[, cluster := factor(cutree(hc.tree, k=n.clusters)) ]
     spirals.hc.list[[linkage]] <- data.table(
       linkage, spirals.dt)
@@ -520,6 +552,18 @@ spirals.plot(2)
 
 ```{r}
 spirals.plot(3)
+```
+
+---
+
+# Distance plots
+
+```{r}
+ggplot()+
+  geom_point(aes(
+    clusters, join.dist),
+    data=spirals.dplot[clusters<=20])+
+  facet_wrap("linkage", labeller=label_both, nrow=2, scales="free")
 ```
 
 ---

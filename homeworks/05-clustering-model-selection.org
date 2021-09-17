@@ -1,0 +1,67 @@
+Model selection for clustering.
+
+Model selection means selecting the clustering parameters which are
+best for a given data set (without using the labels). The goal of this
+homework is to compute and plot model selection criteria for
+clustering.
+
+1. Split the zip.test data observations/rows into 50% train, 50%
+   validation. Use base::set.seed and base::sample for pseudo-random
+   assignment with a fixed seed. Use base::table(digit.label, set) to
+   print and display a contingency table. Are there about the same
+   number of each digit/label in each set?
+
+2. Show that validation error can NOT be used as a model selection
+   criterion for kmeans. Use stats::kmeans on the train data, for 1 to
+   20 clusters (or maybe go up to 50 if you really want to show that
+   validation error never goes back up). For each number of clusters,
+   and for each set (train/validation), compute the within-cluster sum
+   of squares (to do that you need to first compute the closest
+   cluster center to each observation, using the "centers" component
+   of the list returned by kmeans on the train set). You can check
+   your work by comparing your within-cluster sum of squares for the
+   train set with "tot.withinss" (they should be the same). Plot y=sum
+   of squares as a function of x=number of clusters, with a different
+   colored line for each set (e.g. train=red, validation=black). Do
+   both of your lines decrease as expected?
+
+3. Show that validation negative log likelihood CAN be used as a model
+   selection criterion for Gaussian Mixture Models. Use mclust::Mclust
+   on the train data, for 1 to 50 clusters (or even more clusters if
+   the validation curve does not go back up), and for a single value
+   of modelNames (e.g. EII). Remember you can use a subset of data for
+   the initialization to reduce computation time. Use mclust::dens to
+   compute a vector of log likelihood values, one for each observation
+   (in both train/validation sets). Compute and plot y=mean negative
+   log likelihood as a function of x=number of clusters, using
+   different colored lines for different sets (e.g. train=red,
+   validation=black). Does the train negative log likelihood always
+   decrease as expected? Does the validation negative log likelihood
+   decrease and then increase (U shape) as expected?  If the
+   validation curve does not increase, then you need to increase the
+   maximum number of mixture components. With enough mixture
+   components you should see that the validation curve starts to
+   increase.
+
+** CS599 Graduate students only
+
+The goal is to implement and plot the gap statistic described in
+ESL-14.3.11, using kmeans and the whole zip.test data. The main idea
+is that if there are real clusters in the data, then the kmeans sum of
+squares on the zip.test data should decrease more rapidly than the
+kmeans sum of squares on random uniform data.
+- You will need to use the stats::runif function to generate uniform
+  random numbers between -1 and 1, in a matrix the same size as the
+  zip.test data matrix you cluster.
+- Generate 20 random matrices, as they did in ESL Figure 14.11.
+- Compute kmeans for 1 to KMAX clusters (where KMAX=40 or maybe
+  larger, make sure that the gap statistic is not choosing KMAX as the
+  best number of clusters), for each of the 21 data sets (zip.test +
+  20 random uniform). For clarity use a for loop over a list with 21
+  elements.
+- Compute the quantities shown in ESL Figure 14.11, and make two
+  ggplots. The first plot is y=normalized sum of squares as a function
+  of x=number of clusters, zip.test line in green, mean uniform random
+  line in blue. The second plot is y=gap statistic with error
+  bars/bands as a function of x=number of clusters (use geom_line and
+  geom_ribbon).

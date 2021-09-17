@@ -464,6 +464,22 @@ ggplot()+
 
 ---
 
+# distance plot
+
+```{r}
+N <- nrow(data.mat)
+after.dist <- data.table(
+  join.dist=hc.tree$height,
+  before=N:2,
+  clusters=seq(N-1, 1))
+ggplot()+
+  geom_point(aes(
+    clusters, join.dist),
+    data=after.dist)
+```
+
+---
+
 # Another 2d data set
 
 ```{r}
@@ -496,10 +512,25 @@ ggplot()+
 
 ```{r}
 spirals.dist <- dist(spirals)
+linkage.vec <- c(
+  "single", "average", "complete", "median",
+  "centroid", "ward.D", "ward.D2", "mcquitty")
+spirals.tree.list <- list()
+N <- nrow(spirals)
+spirals.dplot.list <- list()
+for(linkage in linkage.vec){
+  hc.tree <- hclust(spirals.dist, linkage)
+  spirals.tree.list[[linkage]] <- hc.tree
+  spirals.dplot.list[[linkage]] <- data.table(
+    linkage,
+    join.dist=hc.tree$height,
+    clusters=seq(N-1, 1))
+}
+spirals.dplot <- do.call(rbind, spirals.dplot.list)
 spirals.plot <- function(n.clusters){
   spirals.hc.list <- list()
-  for(linkage in c("single", "average", "complete", "median", "centroid", "ward.D", "ward.D2", "mcquitty")){
-    hc.tree <- hclust(spirals.dist, linkage)
+  for(linkage in linkage.vec){
+    hc.tree <- spirals.tree.list[[linkage]]
     spirals.dt[, cluster := factor(cutree(hc.tree, k=n.clusters)) ]
     spirals.hc.list[[linkage]] <- data.table(
       linkage, spirals.dt)
@@ -521,6 +552,18 @@ spirals.plot(2)
 
 ```{r}
 spirals.plot(3)
+```
+
+---
+
+# Distance plots
+
+```{r}
+ggplot()+
+  geom_point(aes(
+    clusters, join.dist),
+    data=spirals.dplot[clusters<=20])+
+  facet_wrap("linkage", labeller=label_both, nrow=2, scales="free")
 ```
 
 ---

@@ -11,11 +11,40 @@ knitr::opts_chunk$set(
   fig.height=6)
 ```
 
-# Three normal densities
+# Clustering framework
+
+- Let $X = [x_1 \cdots x_n]^\intercal \in\mathbb R^{n\times p}$ be the
+  data matrix (input for clustering), where $x_i\in\mathbb R^p$ is the
+  input vector for observation $i$.
+- Example iris $n=150$ observations, $p=4$ dimensions.
+- Consider only one of those columns, 
+
+```{r results=TRUE}
+head(as.matrix(iris[,"Petal.Length",drop=FALSE]))
+```
+
+---
+
+# One column can be visualized as a histogram
+
+```{r}
+library(ggplot2)
+ggplot()+
+  geom_histogram(aes(
+    Petal.Length),
+    bins=30,
+    data=iris)+
+  geom_point(aes(
+    Petal.Length, 0),
+    data=iris)
+```
+
+---
+
+# Simulation: three normal densities
 
 ```{r}
 library(data.table)
-library(ggplot2)
 N.per.cluster <- 20
 sim.dt.list <- list()
 grid.vec <- seq(0, 4, l=501)
@@ -79,6 +108,7 @@ gg.points
 
 ```{r}
 library(mclust)
+set.y <- c(train=1, validation=2)*-0.15
 plot.k <- function(k){
   fit <- mclust::Mclust(sim.dt$feature, k, "E", verbose=FALSE)
   model.dt <- data.table(
@@ -227,7 +257,6 @@ plot.k(10)
 # Divide into train and validation
 
 ```{r}
-set.y <- c(train=1, validation=2)*-0.15
 set.seed(1)
 sim.dt[, set := rep(names(set.y), l=.N)]
 sim.train <- sim.dt[set=="train"]
@@ -425,3 +454,8 @@ ggplot()+
   coord_equal()
 ```
 
+---
+
+# Possible exam questions
+
+- TODO

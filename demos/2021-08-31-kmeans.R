@@ -26,4 +26,5 @@ dist.dt <- data.table(expand.grid(
   data.i=1:nrow(data.dt)))
 dist.dt[, error := rowSums((data.mat[data.i,]-centers.mat[centers.i,])^2)]
 
-anRpackage::rcpp_hello_world(data.mat, centers.mat) # all ones, bug?
+anRpackage::find_closest_center(data.mat, centers.mat) # all ones, bug?
+

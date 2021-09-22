@@ -5,6 +5,7 @@ output: beamer_presentation
 ---
 
 ```{r opts, echo=FALSE}
+library(mclust)
 knitr::opts_chunk$set(
   echo=FALSE, results=FALSE,
   fig.width=10,
@@ -107,7 +108,6 @@ gg.points
 # Fit gaussian mixture model 1
 
 ```{r}
-library(mclust)
 set.y <- c(train=1, validation=2)*-0.15
 plot.k <- function(k){
   fit <- mclust::Mclust(sim.dt$feature, k, "E", verbose=FALSE)
@@ -383,7 +383,7 @@ plot.k(10)
 
 ---
 
-# Overall log likelihood plot
+# Overall negative log likelihood plot
 
 ```{r}
 lik.dt <- do.call(rbind, lik.dt.list)
@@ -406,56 +406,30 @@ directlabels::direct.label(gg, "right.polygons")
 
 ---
 
-# Visualize iris data with labels
+# Diagram of 3-fold cross-validation
 
-```{r}
-color.code <- c(
-  setosa="#1B9E77",
-  versicolor="#D95F02",
-  virginica="#7570B3",
-  "1"="#E7298A",
-  "2"="#66A61E",
-  "3"="#E6AB02", 
-  "4"="#A6761D")
-iris.dt <- data.table(iris)
-gg <- ggplot()+
-  scale_color_manual(values=color.code)+
-  geom_point(aes(
-    Petal.Length, Petal.Width, color=Species),
-    data=iris.dt)+
-  coord_equal()
-directlabels::direct.label(gg, "smart.grid")
-```
+- $K$-fold cross-validation randomly assigns a fold ID number from 1
+  to $K$ to each row.
+- There are $K$ splits; for each split data with that fold ID are
+  validation, and all others are train.
+- For each hyper-parameter (e.g., number of clusters), we compute the
+  mean log likelihood over all validation sets/splits.
+- Select model with largest mean validation log likelihood.
 
----
-
-# Visualize iris data without labels
-
-- Let $X = [x_1 \cdots x_n]^\intercal \in\mathbb R^{n\times p}$ be the
-  data matrix (input for clustering), where $x_i\in\mathbb R^p$ is the
-  input vector for observation $i$.
-- Example iris $n=150$ observations, $p=2$ dimensions.
-
-```{r results=TRUE}
-data.mat <- as.matrix(
-  iris.dt[, c("Petal.Width","Petal.Length")])
-data.mat[1:4,]
-```
-
-```{r fig.height=3}
-theme_set(
-  ##theme_bw()+theme(panel.spacing=grid::unit(0, "lines"))
-  theme_grey()+theme(text=element_text(size=20))
-)
-ggplot()+
-  geom_point(aes(
-    Petal.Length, Petal.Width),
-    data=iris.dt)+
-  coord_equal()
-```
+![Cross-validation for unsupervised learning](drawing-cross-validation.pdf)
 
 ---
 
 # Possible exam questions
 
-- TODO
+- What kinds of clustering hyper-parameter values result in underfitting, and
+  why should that be avoided?
+- What kinds of clustering hyper-parameter values result in
+  overfitting, and why should that be avoided?
+- Using cross-validation with a single split, how should the number of
+  clusters be chosen in Gaussian mixture models?
+- Using K-fold cross-validation, how should the number of clusters be
+  chosen in Gaussian mixture models?
+- Describe/draw typical (negative) log likelihood curves, as a
+  function of the number of clusters. Explain/draw where
+  over/under-fitting occur, and which model size should be selected.

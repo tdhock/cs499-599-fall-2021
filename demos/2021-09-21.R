@@ -1,35 +1,16 @@
 data.mat <- as.matrix(
   iris[, c("Petal.Length", "Petal.Width")])
-head(data.mat)
-library(data.table)
-data.dt <- data.table(data.mat)
-library(ggplot2)
-gg <- ggplot()+
-  geom_point(aes(
-    Petal.Length, Petal.Width),
-    data=data.dt)+
-  coord_equal()
 
+## k-means initialization.
 K <- 3
 set.seed(1)
 centers.mat <- data.mat[sample(1:nrow(data.dt), K), ]
-(centers.dt <- data.table(
-  centers.mat,
-  cluster=factor(1:nrow(centers.mat))))
-gg+
-  geom_point(aes(
-    Petal.Length, Petal.Width, color=cluster),
-    data=centers.dt)
 
-dist.dt <- data.table(expand.grid(
-  centers.i=1:nrow(centers.dt),
-  data.i=1:nrow(data.dt)))
-dist.dt[, error := rowSums((data.mat[data.i,]-centers.mat[centers.i,])^2)]
-
+## k-means assignment in C++ code.
 clust.id.vec <- anRpackage::find_closest_center(
   data.mat, centers.mat)
 
-## two ways to compute new means. #1 tapply.
+## several ways to compute new means. #1 tapply.
 (mean.list <- tapply(
   seq_along(clust.id.vec), clust.id.vec, function(i){
     colMeans(data.mat[i,])
@@ -43,3 +24,8 @@ mean.dt <- data.table(
   data.table(t(colMeans(data.mat[data.i,])))
 }, keyby=cluster]
 (centers.new <- as.matrix(mean.dt[,-1]))
+
+##3 C++ code, no big time/space savings over R code, but maybe a fun
+##exercise for the reader.
+centers.new <- anRpackage::compute_centers(
+  data.mat, clust.id.vec)

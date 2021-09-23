@@ -1,0 +1,55 @@
+Homework 8: Binary segmentation
+
+The goal of this homework is to compute and plot binary segmentation
+models for sequence data, and compare the speed of two R packages.
+
+1. install R package neuroblastoma and attach the data set via
+   data(neuroblastoma, package="neuroblastoma"). Compute just the
+   subset of data on chromosome=2, profile.id=4. Plot the logratio as
+   a function of position. How many data points are there on this
+   sequence?
+
+2. Use binsegRcpp::binseg_normal(logratio_vector, Kmax) to compute
+   binary segmentation models with a Kmax of 20 segments for this data
+   set. Use the plot method to show a plot of loss values versus model
+   size. Does the loss always decrease as expected? After what model
+   size is there a "kink" or inflection point past which it decreases
+   more slowly? (that is the "good" model size which you should
+   select)
+
+3. Make a ggplot of your selected model on top of the data set. For
+   simplicity instead of x=position (as in problem 1), use
+   x=seq_along(logratio) (which is just 1 to N, same scale as the
+   numbers returned by binseg_normal). Use geom_segment to show
+   segment means and geom_vline to show changepoints. Does the model
+   have any obvious false positives (changepoints predicted where the
+   data have no significant changes) or false negatives (no change
+   predicted where the data has a significant change)?
+
+20 Extra credit points: Do a speed comparison of two different
+implementations of binary segmentation. Use
+changepoint::cpt.mean(logratio_vector, Q=100, method="BinSeg",
+penalty="Manual") to compute the same binary segmentation model, up to
+100 segments, on a wide range of data sequences (each data sequence is
+a unique combination of profile.id/chromosome values, each has a
+different number of rows, you should compute the binary segmentation
+models for the smallest/largest data sets and some in between). Use
+microbenchmark to compute timings of binsegRcpp with 100 segments as
+well. Make a ggplot with log-log axes that compares the computation
+times of the two algorithms. (x=data size, y=seconds, color=package)
+Are there any significant speed differences?
+
+** CS599 graduate students only
+
+Based on the pseudocode in the article, and equations in the slides,
+code binary segmentation for the square loss. Your R function should
+be named BINSEG and input (1) a vector of numeric data, and (2) the
+maximum number of segments. During each iteration you should consider
+each possible split, compute the amount that the loss would decrease
+for each split, then select the split which decreases the loss the
+most. It should output a vector of square loss values, from 1 to the
+maximum number of segments (for simplicity, do not output the
+changepoints). Run your algorithm on the same data set as in problems
+1-3. Make another plot of loss versus model size, using color for
+different implementations (e.g. binsegRcpp=red, yours=black). Does
+your code compute the same loss values as binsegRcpp?

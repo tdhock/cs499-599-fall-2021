@@ -11,10 +11,44 @@ knitr::opts_chunk$set(
   fig.height=6)
 ```
 
+# Motivation for changepoint detection in time series data
+
+- Detecting changes/abnormalities important in medicine.
+
+![Electrocardiograms (heart monitoring), Fotoohinasab et al, Asilomar conference 2020.](intro-ecg)
+
+---
+
+# Motivation for changepoint detection in time series data
+
+- Detecting the time when a spike occurs is important in neuroscience.
+
+![Neural spikes in calcium imaging data, Jewell et al, Biostatistics
+2019.](intro-neuroscience)
+
+---
+
+# Motivation for changepoint detection in genomic data sequences
+
+- Detecting breakpoints is important in diagnosis of some types of
+  cancer, such as neuroblastoma.
+
+![DNA copy number data, breakpoints associated with aggressive cancer,
+Hocking et al, Bioinformatics 2014.](intro-breakpoints)
+
+---
+
+# Motivation for changepoint detection in genomic data sequences
+
+- Detecting peaks (up/down changes) in genomic data is important in
+  order to understand which genes are active or inactive.
+
+![ChIP-seq data for characterizing active regions in the human genome, Hocking et al, Bioinformatics 2017.](intro-peaks)
+
 # Segmentation / changepoint detection framework
 
 - Let $x_1, \dots, x_n \in\mathbb R$ be a data sequence
-  over space or time.
+  over space or time (logratio column in DNA copy number data below).
 - Where are the abrupt changes in the data sequence?
 
 ```{r results=TRUE}
@@ -59,6 +93,7 @@ ggplot()+
 - This normal distribution assumption means that we want to find
   segments/changepoints with mean $m$ that minimize the square loss,
   $(x-m)^2$.
+- Other distributional assumptions / loss functions are possible.
 
 --- 
 
@@ -67,6 +102,8 @@ ggplot()+
 ```{r}
 one.dt[, data.i := .I]
 gg <- ggplot()+
+  scale_x_continuous(
+    limits=c(0, nrow(one.dt)+1))+
   scale_y_continuous(
     "logratio (noisy copy number measurement)")+
   geom_point(aes(
@@ -77,7 +114,7 @@ gg
 
 --- 
 
-# Fit a mean model
+# Simplest model, 1 segment, 0 changepoints
 
 ```{r}
 bs.models <- binsegRcpp::binseg_normal(one.dt[["logratio"]])
@@ -166,30 +203,11 @@ plotK(100)
 
 ---
 
-# Find `r nrow(one.dt)` segments
+# Largest model: `r nrow(one.dt)` segments (changes everywhere)
 
 ```{r}
 plotK(nrow(one.dt))
 ```
-
----
-
-# Comparison with previous algorithms from clustering
-
-- Binary segmentation has segment/cluster-specific mean parameter, as
-  in K-means and Gaussian mixture models. These algorithms attempt
-  optimization of an error function which measures how well the means
-  fit the data (but are not guaranteed to compute the globally
-  optimal/best model).
-- Binary segmentation is deterministic (different from K-means/GMM
-  which requires random initialization). It performs a sequence of
-  greedy minimizations (as in hierarchical clustering).
-- Binary segmentation defines a sequence of split operations (from 1
-  segment to N segments), whereas agglomerative hierarchical
-  clustering defines a sequence of join operations (from N clusters to
-  1 cluster). Data with common segment mean must be adjacent in
-  time/space; hierarchical clustering joins may happen between any
-  pair of data points (no space/time dimension).
 
 ---
 
@@ -200,7 +218,7 @@ plotK(nrow(one.dt))
   between data $x$ and mean $m^{(k)}$ vectors, $E_k = \sum_{i=1}^n
   (x_i-m^{(k)}_i)^2$
 - As in previous clustering models, kink in the error curve can be
-  used as model selection criterion.
+  used as a simple model selection criterion.
 
 ```{r fig.height=5}
 ggplot()+
@@ -254,16 +272,17 @@ const.mat <- before.after(x.vec^2)
 s.mat <- before.after(x.vec)
 l.mat <- const.mat-s.mat^2/n.mat
 err.dt <- data.table(
-  l.mat,
-  loss=rowSums(l.mat),
+  loss=l.mat,
+  loss.total=rowSums(l.mat),
+  mean=s.mat/n.mat,
   end=end.vec)
-err.dt[, is.min := loss == min(loss)]
-(first.end <- err.dt[, which(is.min)])
-first.min <- err.dt[is.min==TRUE]
+first.min <- err.dt[which.min(loss.total)]
 
 plotChange <- function(show.i){
   show.change <- err.dt[show.i]
-  show.long <- melt(show.change, measure=colnames(l.mat))
+  show.long <- melt(
+    show.change,
+    measure=c("loss.before", "loss.after"))
   show.segs <- data.table(
     start=c(1, show.i+1),
     end=c(show.i, n.data),
@@ -277,20 +296,20 @@ plotChange <- function(show.i){
       color=model.color,
       data=show.change)+
     geom_text(aes(
-      end+0.5, -Inf, label=sprintf(" total loss=%.4f", loss)),
+      end+0.5, -Inf, label=sprintf(" total loss=%.4f", loss.total)),
       color=model.color,
       hjust=0,
       vjust=-0.1,
       data=data.table(y="loss", show.change))+
     geom_text(aes(
       end+0.5, -Inf,
-      label=sprintf(" %s loss=%.4f ", variable, value),
-      hjust=hjust.vec[paste(variable)]),
+      label=sprintf(" %s=%.4f ", variable, value),
+      hjust=hjust.vec[sub("loss.","",variable)]),
       color=model.color,
       data=data.table(y="logratio", show.long),
       vjust=-0.1)+
     geom_point(aes(
-      end+0.5, loss),
+      end+0.5, loss.total),
       shape=21,
       data=data.table(y="loss", err.dt))+
     facet_grid(y ~ ., scales="free")+
@@ -334,14 +353,27 @@ plotChange(157)
 # Second step of binary segmentation
 
 ```{r}
-two.dt <- data.table(one.dt)
-two.dt[, seg := factor(ifelse(
-  data.i <= first.end, "before", "after"), names(hjust.vec))]
-two.dt[, offset := ifelse(data.i <= first.end, 0, first.end)]
-two.dt[, first.loss := ifelse(
-  data.i <= first.end, first.min$before, first.min$after)]
-two.dt[, other.loss := ifelse(
-  data.i <= first.end, first.min$after, first.min$before)]
+(seg.info <- first.min[, data.table(
+  start=c(1, end+1),
+  end=c(end, nrow(one.dt)),
+  seg=factor(c("before", "after"), c("before", "after")),
+  offset=c(0, end))])
+seg.ord <- list(first=identity, other=rev)
+for(name in names(seg.ord)){
+  fun <- seg.ord[[name]]
+  for(data.type in c("mean","loss")){
+    col.vec <- paste0(data.type,".",c("before","after"))
+    orig.ord <- unlist(first.min[, ..col.vec])
+    set(seg.info, j=paste0(name, ".", data.type), value=fun(orig.ord))
+  }
+}
+seg.info
+
+one.dt[, i := data.i]
+setkey(one.dt, data.i, i)
+setkey(seg.info, start, end)
+two.dt <- foverlaps(one.dt, seg.info)
+##two.dt <- data.table(one.dt)[seg.info, on=.(i <= end, i >= start)]
 two.err <- two.dt[, {
   rel.end <- seq(1, .N-1)
   n.mat <- cbind(rel.end, rev(rel.end))
@@ -349,49 +381,117 @@ two.err <- two.dt[, {
   s.mat <- before.after(logratio)
   l.mat <- const.mat-s.mat^2/n.mat
   data.table(
-    l.mat,
+    mean=s.mat/n.mat,
     loss.this=rowSums(l.mat),
     loss.decrease=first.loss-rowSums(l.mat),
     loss=other.loss+rowSums(l.mat),
-    end=rel.end+offset)
-}, by=.(seg, offset, first.loss, other.loss)]
-ggplot()+
-  geom_point(aes(
-    data.i, logratio),
-    data=data.table(y="logratio", two.dt))+
-  geom_point(aes(
-    end+0.5, loss),
-    shape=21,
-    data=data.table(y="loss", two.err))+
-  facet_grid(y ~ seg, scales="free", space="free")+
-  scale_x_continuous(
-    breaks=seq(0, 1000, by=10))+
-  coord_cartesian(expand=TRUE)
+    new.end=rel.end+offset)
+}, by=names(seg.info)]
+
+plot2 <- function(show.i){
+  (show.err <- two.err[show.i])
+  show.other <- seg.info[seg != show.err$seg]
+  show.change <- show.err[, .(seg, start, end=new.end, mean=mean.before)]
+  show.segs <- rbind(
+    show.other[, .(seg, start, end, mean=first.mean)],
+    show.change,
+    show.err[, .(seg, start=new.end+1, end, mean=mean.after)])
+  ggplot()+
+    geom_point(aes(
+      data.i, logratio),
+      data=data.table(y="logratio", two.dt))+
+    geom_point(aes(
+      new.end+0.5, loss),
+      shape=21,
+      data=data.table(y="loss", two.err))+
+    geom_segment(aes(
+      start-0.5, mean,
+      xend=end+0.5, yend=mean),
+      size=2,
+      alpha=0.5,
+      color=model.color,
+      data=data.table(y="logratio", show.segs))+
+    geom_vline(aes(
+      xintercept=end+0.5),
+      color=model.color,
+      data=show.change)+
+    facet_grid(y ~ ., scales="free", space="free")+
+    scale_x_continuous(
+      breaks=seq(0, 1000, by=20))+
+    coord_cartesian(expand=TRUE)
+}
+plot2(15)
 
 ```
 
-# Loss computation
+---
 
-- Minimization can be performed by choosing the split which maximizes
-  the decrease in loss with respect to previous model (with no split).
+# Second step of binary segmentation
 
 ```{r}
-first.min.long <- melt(
-  first.min, measure=names(hjust.vec), variable.name="seg")
+plot2(30)
+```
+
+---
+
+# Second step of binary segmentation
+
+```{r}
+plot2(100)
+```
+
+---
+
+# Second step of binary segmentation
+
+```{r}
+plot2(112)
+```
+
+---
+
+# Second step of binary segmentation
+
+```{r}
+plot2(156)
+```
+
+---
+
+# Second step of binary segmentation
+
+```{r}
+plot2(200)
+```
+
+---
+
+# Loss computation
+
+- Minimization can be performed by choosing the split with loss (black
+  point) which maximizes the decrease in loss with respect to previous
+  model (red, with no split).
+
+```{r}
+first.min.long <- nc::capture_melt_single(
+  first.min, "loss.",
+  seg="before|after", function(x)factor(x, c("before", "after")))
 ggplot()+
   geom_hline(aes(
     yintercept=value),
-    data=data.table(y="loss on this segment", first.min.long))+
+    color="red",
+    data=data.table(
+      y="loss on this segment", first.min.long))+
   ## geom_point(aes(
   ##   end+0.5, loss.decrease),
   ##   shape=21,
   ##   data=data.table(y="loss decrease", two.err))+
   geom_point(aes(
-    end+0.5, loss),
+    new.end+0.5, loss),
     shape=21,
     data=data.table(y="total loss", two.err))+
   geom_point(aes(
-    end+0.5, loss.this),
+    new.end+0.5, loss.this),
     shape=21,
     data=data.table(y="loss on this segment", two.err))+
   facet_grid(y ~ seg, scales="free", space="free_x")+
@@ -403,6 +503,25 @@ ggplot()+
 
 ---
 
+# Comparison with previous algorithms from clustering
+
+- Binary segmentation has segment/cluster-specific mean parameter, as
+  in K-means and Gaussian mixture models. These algorithms attempt
+  optimization of an error function which measures how well the means
+  fit the data (but are not guaranteed to compute the globally
+  optimal/best model).
+- Binary segmentation is deterministic (different from K-means/GMM
+  which requires random initialization). It performs a sequence of
+  greedy minimizations (as in hierarchical clustering).
+- Binary segmentation defines a sequence of split operations (from 1
+  segment to N segments), whereas agglomerative hierarchical
+  clustering defines a sequence of join operations (from N clusters to
+  1 cluster). Data with common segment mean must be adjacent in
+  time/space; hierarchical clustering joins may happen between any
+  pair of data points (no space/time dimension).
+
+---
+
 # Complexity analysis
 
 - Assume $n$ data and $K$ segments.
@@ -410,12 +529,20 @@ ggplot()+
   data takes $O(t)$ time.
 - Keep a list of segments which could be split, sorted by loss
   decrease values.
-- Best case is when segments get cut in half each time, $O(n \log K)$ time.
+- Best case is when segments get cut in half each time, $O(n \log K)$
+  time. (minimize number of possible splits for which we have to recompute loss)
 - Worst case is when splits are very unequal (1, $t-1$), $O(n K)$
-  time.
+  time. (maximize number of possible splits for which we have to
+  recompute loss)
 
 ---
 
 # Possible exam questions
 
-- TODO
+- Explain in detail one similarity and one difference between binary
+  segmentation and k-means. (gaussian mixture models, hierarchical
+  clustering)
+- For a sequence of $n=10$ data, we need to compute the loss for each
+  of the 9 possible splits in the first iteration of binary
+  segmentation. What is the number of splits for which we must compute
+  the loss in the second step? (best and worst case)

@@ -96,27 +96,38 @@ that week, 11:59PM.
   - [[file:slides/05-clustering-model-selection.pdf][Slides]], Estimating the number of clusters, ESL-14.3.11. Model
     selection for latent variable models, MLAPP-11.5.
   - Quizzes model selection 1-3.
-- Sept 27, Review and exam, [[file:homeworks/Rpkg.org][grad student R package coding project 1 due]].
-- Oct 4, Homework 6: Binary segmentation
+- Sept 27, Review and exam, [[file:homeworks/Rpkg.org][CS599 grad student R package coding
+  project 1 due]], CS499 no week 6 homework.
+- Oct 4, [[file:homeworks/07-binary-segmentation.org][Homework week 7]]: Binary segmentation
   - [[file:slides/07-binary-segmentation.pdf][Slides]], Intro to changepoint detection [[https://arxiv.org/pdf/1801.00718.pdf][Truong et al]]. sections 1-2. Binary
-    segmentation. Section 5.2.2. Estimating the number of changes. section 6.
-- Oct 11, Homework 7: Optimal segmentation
+    segmentation. Section 5.2.2. Estimating the number of
+    changes. section 6.
+  - Quizzes changepoint 1, binary segmentation 1.
+- Oct 11, Homework week 8: Optimal segmentation
   - Optimal detection, [[https://arxiv.org/pdf/1801.00718.pdf][Truong et al]] 5.1. [[file:2020-10-12-dynamic-programming-slides.pdf][Dynamic programming slides
     PDF]]. Models and cost functions, [[https://arxiv.org/pdf/1801.00718.pdf][Truong et al]] section 4.
-- Oct 18, Homework 8: Hidden Markov Models
+  - Quizzes changepoint 2, optimal segmentation 1-2.
+- Oct 18, Homework week 9: Hidden Markov Models
   - [[file:depmixS4.pdf][depmixS4 vignette]] section 2. Markov Models, MLAPP-17.2. Hidden
     Markov Models, MLAPP-17.3-5. Learning for HMMs, MLAPP-17.5.
-- Oct 25, Homework 9: Segmentation model selection
+  - Quizzes HMM 1-3.
+- Oct 25, Homework week 10: Segmentation model selection
   - AIC/BIC, MLAPP-5.3.2.4, ESL-7.5. [[http://members.cbio.mines-paristech.fr/~thocking/figure-max-auc/][Changepoint ROC curve interactive
     data viz]].
-- Nov 1, Veterans day 11/11. Review and exam.
-- Nov 8, Homework 10: Principal Components Analysis
+  - Quizzes HMM 4-5, model selection 4.
+- Nov 1, Veterans day 11/11. Review and exam. [[file:homeworks/Rpkg.org][CS599 grad student R
+  package coding project 2 due]], CS499 no homework week 11.
+- Nov 8, Homework week 12: Principal Components Analysis
   - Principal Components Analysis, ESL-14.5. MLAPP-12.2.
-- Nov 15, Homework 11: Auto-encoders
+  - Quizzes PCA 1-3.
+- Nov 15, Homework week 13: Auto-encoders
   - Deep generative models, MLAPP-28.2 to 28.3. Deep auto-encoders,
     MLAPP-28.3.2. MLAPP-28.4.2 to 28.4.3.
-- Nov 22, Thanksgiving 11/25-26. Homework 12. T-SNE or Self-organizing maps?
-- Nov 29, Reading week, [[file:homeworks/Rpkg.org][grad student R package coding project 2 due]].
+  - Quizzes Autoencoders 1-3.
+- Nov 22, Thanksgiving 11/25-26. Homework week 14. T-SNE or Self-organizing maps?
+- Nov 29, Reading week, [[file:homeworks/Rpkg.org][CS599 grad student extra credit R package
+  coding project 3 due (this project is not required; you only have to
+  do this if you want extra credit points)]].
 - Final exams. CS499 Mon Dec 6, 7:30-9:30. CS599 Thurs Dec 9, 7:30-9:30.
 
 ** General Questions and Answers (FAQ)

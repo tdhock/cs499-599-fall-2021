@@ -30,7 +30,12 @@ clustering.
    on the train data, for 1 to 50 clusters (or even more clusters if
    the validation curve does not go back up), and for a single value
    of modelNames (e.g. EII). Remember you can use a subset of data for
-   the initialization to reduce computation time. Use mclust::dens to
+   the initialization to reduce computation time. Also to reduce
+   computation time you do not have to do all models from 1 to 50 (n.clusters=1,
+   2, 3, ...); you can skip some models and try every 5 or 10 (n.clusters=1, 10,
+   20, 30, ...); the point is to observe the U shape of the validation
+   error curve, so if you have to increase the maximum number of
+   clusters in order to observe a U shape, please do so. Use mclust::dens to
    compute a vector of log likelihood values, one for each observation
    (in both train/validation sets). Compute and plot y=mean negative
    log likelihood as a function of x=number of clusters, using
@@ -38,7 +43,9 @@ clustering.
    validation=black). Does the train negative log likelihood always
    decrease as expected? Does the validation negative log likelihood
    decrease and then increase (U shape) as expected?  If the
-   validation curve does not increase, then you need to increase the
+   validation curve does not increase, or it looks like there may be a
+   lower validation value for a larger number of clusters, 
+   then you need to increase the
    maximum number of mixture components. With enough mixture
    components you should see that the validation curve starts to
    increase.

@@ -137,6 +137,12 @@ that week, 11:59PM.
   which are only tested with the most recent versions of R, so if you
   are getting errors with an old version of R, try upgrading to the
   most recent version.
+- Some function give me a NULL result, how can I work around that? Try
+  if(!is.null(result)){save your results}
+- Some for loop over N items takes a long time, but failed/errored at
+  the N-1'th iteration. How can I re-start computations where I left
+  off? Try if(!some_key %in% names(result_list)){do the computations
+  and save result with name some_key in result_list}
 
 ** How to ace this class
 

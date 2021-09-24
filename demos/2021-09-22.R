@@ -2,6 +2,7 @@ head(iris)
 data.mat <- as.matrix(iris[,1:4])
 n.folds <- 4 # 75% train, 25% validation.
 set.seed(1)
+
 (fold.id.vec <- sample(rep(1:n.folds, l=nrow(iris))))
 valid.fold <- 1
 is.valid <- fold.id.vec == valid.fold

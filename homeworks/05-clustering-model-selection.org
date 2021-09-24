@@ -43,6 +43,11 @@ clustering.
    components you should see that the validation curve starts to
    increase.
 
+4. (10 extra credit) Instead of computing and plotting the error for a
+   single train/validation split, plot the values for several
+   train/validation splits, using K-fold cross-validation. Also
+   include a plot of the mean error over all splits.
+
 ** CS599 Graduate students only
 
 The goal is to implement and plot the gap statistic described in

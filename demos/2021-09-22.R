@@ -2,7 +2,7 @@ head(iris)
 data.mat <- as.matrix(iris[,1:4])
 n.folds <- 4 # 75% train, 25% validation.
 set.seed(1)
-fold.id.vec <- sample(rep(1:n.folds, l=nrow(iris)))
+(fold.id.vec <- sample(rep(1:n.folds, l=nrow(iris))))
 valid.fold <- 1
 is.valid <- fold.id.vec == valid.fold
 is.train <- !is.valid
@@ -10,14 +10,16 @@ is.train <- !is.valid
 set.vec <- ifelse(is.train, "train", "validation")
 set.vec
 table(set.vec, iris$Species)
+
 n.clusters <- 5
+## make sure to use ONLY train data as input to your clustering algorithm, kmeans here.
 kmeans.result <- kmeans(data.mat[is.train,], n.clusters)
 centers.mat <- kmeans.result[["centers"]]
 kmeans(data.mat[is.train,], centers.mat, iter.max=0)
 library(data.table)
-pair.dt <- data.table(expand.grid(
+(pair.dt <- data.table(expand.grid(
   center.i=1:nrow(centers.mat),
-  data.i=1:nrow(data.mat)))
+  data.i=1:nrow(data.mat))))
 pair.dt[, dist := {
   rowSums((data.mat[data.i,]-centers.mat[center.i,])^2)
 }]

@@ -1,0 +1,28 @@
+1. Describe the general clustering problem in terms of the (1)
+   dimensions and (2) range of values, for both the (a) inputs and the
+   (b) outputs of a clustering algorithm.
+
+2. Assuming there are some gold standard labels available, explain how
+   the labels can be used to quantitatively evaluate a clustering
+   algorithm. What value(s) do you compute, and how do you interpret
+   them? Do larger or smaller values indicate a more accurate clustering?
+
+3. Explain the K-means algorithm in terms of the input/initialization,
+   computations during each iteration, when to stop, and what values to output/return.
+
+4. Explain the agglomerative hierarchical clustering algorithm in
+   terms of the input/initialization (including hyper-parameter
+   choices), computations required, when to stop, and what values to
+   output/return.
+
+5. What is model selection? Explain how cross-validation (e.g., a 50%
+   train, 50% validation split) can be used for clustering model
+   selection.
+
+Rubric: minus points for incomplete and/or off-topic responses.
+
+Volunteers to present solutions: TODO.
+
+For the real mid-term on Friday Oct 1 at 8:00AM-8:50AM, what would be
+the analogous questions for the other topics that we have studied?
+

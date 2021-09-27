@@ -96,7 +96,7 @@ that week, 11:59PM.
   - [[file:slides/05-clustering-model-selection.pdf][Slides]], Estimating the number of clusters, ESL-14.3.11. Model
     selection for latent variable models, MLAPP-11.5.
   - Quizzes model selection 1-3.
-- Sept 27, Review and exam, [[file:homeworks/Rpkg.org][CS599 grad student R package coding
+- Sept 27, [[file:exams/01-practice.org][Review]] and exam, [[file:homeworks/Rpkg.org][CS599 grad student R package coding
   project 1 due]], CS499 no week 6 homework.
 - Oct 4, [[file:homeworks/07-binary-segmentation.org][Homework week 7]]: Binary segmentation
   - [[file:slides/07-binary-segmentation.pdf][Slides]], Intro to changepoint detection [[https://arxiv.org/pdf/1801.00718.pdf][Truong et al]]. sections 1-2. Binary

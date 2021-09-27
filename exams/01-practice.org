@@ -21,7 +21,9 @@
 
 Rubric: minus points for incomplete and/or off-topic responses.
 
-Volunteers to present solutions: TODO.
+Volunteers to present solutions:
+- CS499: Georgia, Brendan, Taylor, Kyler, Samantha.
+- CS599: TODO.
 
 For the real mid-term on Friday Oct 1 at 8:00AM-8:50AM, what would be
 the analogous questions for the other topics that we have studied?

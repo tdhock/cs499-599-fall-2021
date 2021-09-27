@@ -4,11 +4,23 @@ data.mat <- as.matrix(
 ## k-means initialization.
 K <- 3
 set.seed(1)
-centers.mat <- data.mat[sample(1:nrow(data.dt), K), ]
+(centers.mat <- data.mat[sample(1:nrow(data.mat), K), ])
 
 ## k-means assignment in C++ code.
-clust.id.vec <- anRpackage::find_closest_center(
-  data.mat, centers.mat)
+(clust.id.vec <- anRpackage::find_closest_center_interface(
+  data.mat, centers.mat))
+
+anRpackage::find_closest_center_interface(
+  data.mat, centers.mat[,1,drop=FALSE])
+
+anRpackage::find_closest_center_interface(
+  data.mat[0,], centers.mat)
+
+anRpackage::find_closest_center_interface(
+  data.mat, centers.mat[0,])
+
+anRpackage::find_closest_center_interface(
+  data.mat[,0], centers.mat[,0])
 
 ## several ways to compute new means. #1 tapply.
 (mean.list <- tapply(

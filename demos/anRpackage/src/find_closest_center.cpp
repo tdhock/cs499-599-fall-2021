@@ -1,20 +1,21 @@
+#include "find_closest_center.h"
+#include <math.h>
 
-#include <Rcpp.h>
-using namespace Rcpp;
-
-// [[Rcpp::export]]
-IntegerVector find_closest_center
-(NumericMatrix data_mat, NumericMatrix centers_mat) {
-  int N_data = data_mat.nrow();
-  int N_centers = centers_mat.nrow();
-  int N_features = centers_mat.ncol();
-  if(N_features != data_mat.ncol()){
-    //ERROR TODO
+int find_closest_center
+(const int N_data,
+ const int N_centers,
+ const int N_features,
+ const double *data_ptr,
+ const double *centers_ptr,
+ //inputs above, outputs below.
+ int *cluster_ptr
+ ){
+  if(N_data < 1){
+    return ERROR_N_DATA_MUST_BE_POSITIVE;
   }
-  double *data_ptr = &data_mat[0];
-  double *centers_ptr = &centers_mat[0];
-  IntegerVector cluster_vec(N_data);
-  int *cluster_ptr = &cluster_vec[0];
+  if(N_centers < 1){
+    return ERROR_N_CENTERS_MUST_BE_POSITIVE;
+  }
   for(int data_i=0; data_i<N_data; data_i++){
     double min_error = INFINITY;
     for(int center_i=0;
@@ -31,9 +32,9 @@ IntegerVector find_closest_center
       }
       if(error < min_error){
 	min_error = error;
-	cluster_vec[data_i] = center_i+1;
+	cluster_ptr[data_i] = center_i+1;
       }
     }
   }
-  return cluster_vec;
+  return 0;//SUCCESS
 }

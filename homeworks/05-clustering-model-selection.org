@@ -30,7 +30,12 @@ clustering.
    on the train data, for 1 to 50 clusters (or even more clusters if
    the validation curve does not go back up), and for a single value
    of modelNames (e.g. EII). Remember you can use a subset of data for
-   the initialization to reduce computation time. Use mclust::dens to
+   the initialization to reduce computation time. Also to reduce
+   computation time you do not have to do all models from 1 to 50 (n.clusters=1,
+   2, 3, ...); you can skip some models and try every 5 or 10 (n.clusters=1, 10,
+   20, 30, ...); the point is to observe the U shape of the validation
+   error curve, so if you have to increase the maximum number of
+   clusters in order to observe a U shape, please do so. Use mclust::dens to
    compute a vector of log likelihood values, one for each observation
    (in both train/validation sets). Compute and plot y=mean negative
    log likelihood as a function of x=number of clusters, using
@@ -38,10 +43,17 @@ clustering.
    validation=black). Does the train negative log likelihood always
    decrease as expected? Does the validation negative log likelihood
    decrease and then increase (U shape) as expected?  If the
-   validation curve does not increase, then you need to increase the
+   validation curve does not increase, or it looks like there may be a
+   lower validation value for a larger number of clusters, 
+   then you need to increase the
    maximum number of mixture components. With enough mixture
    components you should see that the validation curve starts to
    increase.
+
+4. (10 extra credit) Instead of computing and plotting the error for a
+   single train/validation split, plot the values for several
+   train/validation splits, using K-fold cross-validation. Also
+   include a plot of the mean error over all splits.
 
 ** CS599 Graduate students only
 
@@ -60,8 +72,18 @@ kmeans sum of squares on random uniform data.
   20 random uniform). For clarity use a for loop over a list with 21
   elements.
 - Compute the quantities shown in ESL Figure 14.11, and make two
-  ggplots. The first plot is y=normalized sum of squares as a function
-  of x=number of clusters, zip.test line in green, mean uniform random
-  line in blue. The second plot is y=gap statistic with error
-  bars/bands as a function of x=number of clusters (use geom_line and
-  geom_ribbon).
+  ggplots. The first plot is y=normalized log sum of squares as a
+  function of x=number of clusters, zip.test line in green, mean
+  uniform random line in blue. The "tot.withinss" component of the
+  kmeans result is the sum of squares, but you need to take the log
+  then normalize these values by subtracting away the value for 1
+  cluster. The second plot is y=gap statistic with error bars/bands as
+  a function of x=number of clusters (use geom_line and
+  geom_ribbon). The gap statistic is the difference between the
+  blue/green curves in the previous plot, and the error bars are s'K =
+  s_K*sqrt(1+1/20) where s_K is the standard deviation of log sum of
+  squares values over the 20 simulations of random normal
+  data. According to the gap statistic, what number of clusters should
+  you choose? It should be the smallest number of clusters K such that
+  the G(K), the gap statistic at K clusters, is greater than the gap
+  statistic at K+1 clusters minus the error bar, G(K+1) - s'K+1.

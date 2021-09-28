@@ -1,0 +1,156 @@
+---
+title: "Optimal segmentation"
+author: "Toby Dylan Hocking"
+output: beamer_presentation
+---
+
+```{r opts, echo=FALSE}
+knitr::opts_chunk$set(
+  echo=FALSE, results=FALSE,
+  fig.width=10,
+  fig.height=6)
+```
+
+# Motivation for optimal detection
+
+- Binary segmentation is a greedy algorithm, so sometimes it chooses a
+  changepoint which is sub-optimal for a larger model size.
+  
+```{r}
+library(data.table)
+library(ggplot2)
+data(neuroblastoma, package="neuroblastoma")
+nb.dt <- data.table(neuroblastoma[["profiles"]])
+setkey(nb.dt, profile.id, chromosome)
+
+get_segs_loss <- function(pid, chrom, max.segments=6){
+  one <- nb.dt[J(pid, chrom)]
+  logratio <- one[["logratio"]]
+  binseg <- binsegRcpp::binseg_normal(logratio, max.segments)
+  opt <- jointseg::Fpsn(logratio, max.segments)
+  cum.end <- cumsum(logratio)
+  cum.start <- c(0,cum.end)
+  end <- t(opt[["t.est"]])
+  start <- rbind(1, end[-max.segments,]+1)
+  n.data <- end-start+1
+  seg.sum <- cum.end[end]-cum.start[start]
+  ldt <- function(algorithm, loss){
+    data.table(algorithm, segments=seq_along(loss), loss)
+  }
+  loss.dt <- rbind(
+    ldt("optimal", opt$J.est),
+    ldt("binseg", binseg$loss))
+  segs.dt <- rbind(
+    data.table(
+      algorithm="optimal",
+      segments=as.integer(col(end)),
+      start=as.integer(start),
+      end=as.integer(end),
+      mean=as.numeric(seg.sum/n.data)
+    )[!is.na(mean)],
+    data.table(algorithm="binseg", coef(binseg)))
+  one[, data.i := .I]
+  change.dt <- segs.dt[1 < start]
+  list(segment=segs.dt, change=change.dt, loss=loss.dt, data=one)
+}
+
+models <- get_segs_loss("565", "X")
+gg <- ggplot()+
+  geom_text(aes(
+    1000, min(logratio),
+    color=algorithm,
+    hjust=ifelse(algorithm=="binseg", 0, 1),
+    label=sprintf("%s loss=%.2f", algorithm, loss)),
+    data=models[["loss"]])+
+  geom_point(aes(
+    data.i, logratio),
+    shape=1,
+    data=models[["data"]])+
+  geom_segment(aes(
+    start-0.5, mean,
+    color=algorithm,
+    size=algorithm,
+    xend=end+0.5, yend=mean),
+    data=models[["segment"]])+
+  geom_vline(aes(
+    xintercept=start-0.5,
+    size=algorithm,
+    color=algorithm),
+    data=models[["change"]])+
+  scale_size_manual(values=c(optimal=2, binseg=1))+
+  facet_grid(segments ~ ., labeller=label_both)
+gg
+```
+
+---
+
+# Zoom to center
+
+```{r}
+gg+coord_cartesian(xlim=c(2100, 2300))
+```
+
+---
+
+# Zoom to end
+
+```{r}
+gg+coord_cartesian(xlim=c(3700, 3800))
+```
+
+---
+
+# Another example
+
+```{r}
+models <- get_segs_loss("229", "X")
+gg <- ggplot()+
+  geom_text(aes(
+    1000, min(logratio),
+    color=algorithm,
+    hjust=ifelse(algorithm=="binseg", 0, 1),
+    label=sprintf("%s loss=%.2f", algorithm, loss)),
+    data=models[["loss"]])+
+  geom_point(aes(
+    data.i, logratio),
+    shape=1,
+    data=models[["data"]])+
+  geom_segment(aes(
+    start-0.5, mean,
+    color=algorithm,
+    size=algorithm,
+    xend=end+0.5, yend=mean),
+    data=models[["segment"]])+
+  geom_vline(aes(
+    xintercept=start-0.5,
+    size=algorithm,
+    color=algorithm),
+    data=models[["change"]])+
+  scale_size_manual(values=c(optimal=2, binseg=1))+
+  facet_grid(segments ~ ., labeller=label_both)
+gg
+```
+
+---
+
+# Zoom to start
+
+```{r}
+gg+coord_cartesian(xlim=c(0, 200))
+```
+
+---
+
+# Zoom to center
+
+```{r}
+gg+coord_cartesian(xlim=c(2000, 2500))
+```
+
+---
+
+# Zoom to end
+
+```{r}
+gg+coord_cartesian(xlim=c(3700, 3800))
+```

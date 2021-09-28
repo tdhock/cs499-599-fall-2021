@@ -25,6 +25,8 @@ Volunteers to present solutions:
 - CS499: Georgia, Brendan, Taylor, Kyler, Samantha.
 - CS599: Karl, Jacob, Kyle, Hunor, Shadmaan.
 
-For the real mid-term on Friday Oct 1 at 8:00AM-8:50AM, what would be
+For the real mid-term (in class at time shown below), what would be
 the analogous questions for the other topics that we have studied?
+- CS599 Thurs Sept 30 at 8:00AM-9:15AM.
+- CS499 Friday Oct 1 at 8:00AM-8:50AM.
 

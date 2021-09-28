@@ -35,20 +35,21 @@ get_segs_loss <- function(pid, chrom, max.segments=6){
   n.data <- end-start+1
   seg.sum <- cum.end[end]-cum.start[start]
   ldt <- function(algorithm, loss){
-    data.table(algorithm, segments=seq_along(loss), loss)
+    data.table(algorithm=a(algorithm), segments=seq_along(loss), loss)
   }
+  a <- function(x)factor(x, c("optimal", "binseg"))
   loss.dt <- rbind(
     ldt("optimal", opt$J.est),
     ldt("binseg", binseg$loss))
   segs.dt <- rbind(
     data.table(
-      algorithm="optimal",
+      algorithm=a("optimal"),
       segments=as.integer(col(end)),
       start=as.integer(start),
       end=as.integer(end),
       mean=as.numeric(seg.sum/n.data)
     )[!is.na(mean)],
-    data.table(algorithm="binseg", coef(binseg)))
+    data.table(algorithm=a("binseg"), coef(binseg)))
   one[, data.i := .I]
   change.dt <- segs.dt[1 < start]
   list(segment=segs.dt, change=change.dt, loss=loss.dt, data=one)
@@ -57,10 +58,11 @@ get_segs_loss <- function(pid, chrom, max.segments=6){
 models <- get_segs_loss("565", "X")
 gg <- ggplot()+
   geom_text(aes(
-    1000, min(logratio),
+    1000, Inf,
     color=algorithm,
     hjust=ifelse(algorithm=="binseg", 0, 1),
     label=sprintf("%s loss=%.2f", algorithm, loss)),
+    vjust=1,
     data=models[["loss"]])+
   geom_point(aes(
     data.i, logratio),
@@ -78,8 +80,20 @@ gg <- ggplot()+
     color=algorithm),
     data=models[["change"]])+
   scale_size_manual(values=c(optimal=2, binseg=1))+
+  scale_x_continuous(
+    "Position/index in data sequence")+
+  scale_y_continuous(
+    "logratio (approximate DNA copy number)")+
   facet_grid(segments ~ ., labeller=label_both)
 gg
+```
+
+---
+
+# Zoom to start
+
+```{r}
+gg+coord_cartesian(xlim=c(0, 200))
 ```
 
 ---
@@ -106,10 +120,11 @@ gg+coord_cartesian(xlim=c(3700, 3800))
 models <- get_segs_loss("229", "X")
 gg <- ggplot()+
   geom_text(aes(
-    1000, min(logratio),
+    1000, Inf,
     color=algorithm,
     hjust=ifelse(algorithm=="binseg", 0, 1),
     label=sprintf("%s loss=%.2f", algorithm, loss)),
+    vjust=1,
     data=models[["loss"]])+
   geom_point(aes(
     data.i, logratio),
@@ -127,6 +142,10 @@ gg <- ggplot()+
     color=algorithm),
     data=models[["change"]])+
   scale_size_manual(values=c(optimal=2, binseg=1))+
+  scale_x_continuous(
+    "Position/index in data sequence")+
+  scale_y_continuous(
+    "logratio (approximate DNA copy number)")+
   facet_grid(segments ~ ., labeller=label_both)
 gg
 ```
@@ -154,3 +173,80 @@ gg+coord_cartesian(xlim=c(2000, 2500))
 ```{r}
 gg+coord_cartesian(xlim=c(3700, 3800))
 ```
+
+---
+
+# Example 3: difficult for binary segmentation to detect an outlier
+
+```{r}
+models <- get_segs_loss("590", "1")
+gg <- ggplot()+
+  geom_text(aes(
+    100, Inf,
+    color=algorithm,
+    hjust=ifelse(algorithm=="binseg", 0, 1),
+    label=sprintf("%s loss=%.2f", algorithm, loss)),
+    vjust=1,
+    data=models[["loss"]])+
+  geom_point(aes(
+    data.i, logratio),
+    shape=1,
+    data=models[["data"]])+
+  geom_segment(aes(
+    start-0.5, mean,
+    color=algorithm,
+    size=algorithm,
+    xend=end+0.5, yend=mean),
+    data=models[["segment"]])+
+  geom_vline(aes(
+    xintercept=start-0.5,
+    size=algorithm,
+    color=algorithm),
+    data=models[["change"]])+
+  scale_size_manual(values=c(optimal=2, binseg=1))+
+  scale_x_continuous(
+    "Position/index in data sequence")+
+  scale_y_continuous(
+    "logratio (approximate DNA copy number)")+
+  facet_grid(segments ~ ., labeller=label_both)
+gg
+```
+
+---
+
+# Example 4: stuck with sub-optimal change 
+
+```{r}
+models <- get_segs_loss("2", "2", 4)
+gg <- ggplot()+
+  geom_text(aes(
+    100, Inf,
+    color=algorithm,
+    hjust=ifelse(algorithm=="binseg", 0, 1),
+    label=sprintf("%s loss=%.2f", algorithm, loss)),
+    vjust=1,
+    data=models[["loss"]])+
+  geom_point(aes(
+    data.i, logratio),
+    shape=1,
+    data=models[["data"]])+
+  geom_segment(aes(
+    start-0.5, mean,
+    color=algorithm,
+    size=algorithm,
+    xend=end+0.5, yend=mean),
+    data=models[["segment"]])+
+  geom_vline(aes(
+    xintercept=start-0.5,
+    size=algorithm,
+    color=algorithm),
+    data=models[["change"]])+
+  scale_size_manual(values=c(optimal=2, binseg=1))+
+  scale_x_continuous(
+    "Position/index in data sequence")+
+  scale_y_continuous(
+    "logratio (approximate DNA copy number)")+
+  facet_grid(segments ~ ., labeller=label_both)
+gg
+```
+

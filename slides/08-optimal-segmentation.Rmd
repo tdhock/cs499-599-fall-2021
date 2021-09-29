@@ -182,7 +182,7 @@ gg+coord_cartesian(xlim=c(3700, 3800))
 models <- get_segs_loss("590", "1")
 gg <- ggplot()+
   geom_text(aes(
-    100, Inf,
+    500, Inf,
     color=algorithm,
     hjust=ifelse(algorithm=="binseg", 0, 1),
     label=sprintf("%s loss=%.2f", algorithm, loss)),

@@ -15,10 +15,20 @@ knitr::opts_chunk$set(
 
 - Binary segmentation is a greedy algorithm, so sometimes it chooses a
   changepoint which is sub-optimal for a larger model size.
+- Is it possible to compute the changepoints and segments which are
+  optimal for each model size? Yes, with dynamic programming.
+- Is it desirable to compute the optimal changepoints and segments?
+  Yes, see examples in next slides.
+  
+---
+
+# Example 1: stuck with sub-optimal change
   
 ```{r}
-library(data.table)
-library(ggplot2)
+suppressPackageStartupMessages({
+  library(data.table)
+  library(ggplot2)
+})
 data(neuroblastoma, package="neuroblastoma")
 nb.dt <- data.table(neuroblastoma[["profiles"]])
 setkey(nb.dt, profile.id, chromosome)
@@ -56,6 +66,7 @@ get_segs_loss <- function(pid, chrom, max.segments=6){
 }
 
 models <- get_segs_loss("565", "X")
+algo.sizes <- c(optimal=1.25, binseg=0.5)
 gg <- ggplot()+
   geom_text(aes(
     1000, Inf,
@@ -79,7 +90,7 @@ gg <- ggplot()+
     size=algorithm,
     color=algorithm),
     data=models[["change"]])+
-  scale_size_manual(values=c(optimal=2, binseg=1))+
+  scale_size_manual(values=algo.sizes)+
   scale_x_continuous(
     "Position/index in data sequence")+
   scale_y_continuous(
@@ -114,18 +125,11 @@ gg+coord_cartesian(xlim=c(3700, 3800))
 
 ---
 
-# Another example
+# Example 2: missing a small change down
 
 ```{r}
 models <- get_segs_loss("229", "X")
 gg <- ggplot()+
-  geom_text(aes(
-    1000, Inf,
-    color=algorithm,
-    hjust=ifelse(algorithm=="binseg", 0, 1),
-    label=sprintf("%s loss=%.2f", algorithm, loss)),
-    vjust=1,
-    data=models[["loss"]])+
   geom_point(aes(
     data.i, logratio),
     shape=1,
@@ -141,7 +145,14 @@ gg <- ggplot()+
     size=algorithm,
     color=algorithm),
     data=models[["change"]])+
-  scale_size_manual(values=c(optimal=2, binseg=1))+
+  geom_text(aes(
+    1000, Inf,
+    color=algorithm,
+    hjust=ifelse(algorithm=="binseg", 0, 1),
+    label=sprintf("%s loss=%.2f", algorithm, loss)),
+    vjust=1,
+    data=models[["loss"]])+
+  scale_size_manual(values=algo.sizes)+
   scale_x_continuous(
     "Position/index in data sequence")+
   scale_y_continuous(
@@ -176,18 +187,11 @@ gg+coord_cartesian(xlim=c(3700, 3800))
 
 ---
 
-# Example 3: difficult for binary segmentation to detect an outlier
+# Example 3: difficult to detect an outlier
 
 ```{r}
 models <- get_segs_loss("590", "1")
 gg <- ggplot()+
-  geom_text(aes(
-    500, Inf,
-    color=algorithm,
-    hjust=ifelse(algorithm=="binseg", 0, 1),
-    label=sprintf("%s loss=%.2f", algorithm, loss)),
-    vjust=1,
-    data=models[["loss"]])+
   geom_point(aes(
     data.i, logratio),
     shape=1,
@@ -203,7 +207,14 @@ gg <- ggplot()+
     size=algorithm,
     color=algorithm),
     data=models[["change"]])+
-  scale_size_manual(values=c(optimal=2, binseg=1))+
+  geom_label(aes(
+    2000, Inf,
+    color=algorithm,
+    hjust=ifelse(algorithm=="binseg", 0, 1),
+    label=sprintf("%s loss=%.2f", algorithm, loss)),
+    vjust=1,
+    data=models[["loss"]])+
+  scale_size_manual(values=algo.sizes)+
   scale_x_continuous(
     "Position/index in data sequence")+
   scale_y_continuous(
@@ -214,13 +225,21 @@ gg
 
 ---
 
+# Zoom X axis to outlier
+
+```{r}
+gg+coord_cartesian(xlim=c(5000, 5100))
+```
+
+---
+
 # Example 4: stuck with sub-optimal change 
 
 ```{r}
 models <- get_segs_loss("2", "2", 4)
 gg <- ggplot()+
   geom_text(aes(
-    100, Inf,
+    200, Inf,
     color=algorithm,
     hjust=ifelse(algorithm=="binseg", 0, 1),
     label=sprintf("%s loss=%.2f", algorithm, loss)),
@@ -241,7 +260,7 @@ gg <- ggplot()+
     size=algorithm,
     color=algorithm),
     data=models[["change"]])+
-  scale_size_manual(values=c(optimal=2, binseg=1))+
+  scale_size_manual(values=algo.sizes)+
   scale_x_continuous(
     "Position/index in data sequence")+
   scale_y_continuous(
@@ -250,3 +269,202 @@ gg <- ggplot()+
 gg
 ```
 
+---
+
+# Zoom to changepoint
+
+```{r}
+gg+coord_cartesian(xlim=c(50, 100))
+```
+
+---
+
+# Dynamic programming for optimal changepoint detection
+
+- We have $n$ data $z_1, \dots, z_n$.
+- Fix the number of segments $S\in\{1, 2, \dots, n\}$.
+- Optimization variables: $S-1$ changepoints
+    $t_1 < \cdots < t_{S-1}$ and $S$ segment means
+    $u_1,\dots,u_S\in\mathbb R$ ($t_0=0$, $t_S=n$).
+- Statistical model: for every segment $s\in\{1,\dots,S\}$,
+    $z_i \stackrel{\text{iid}}{\sim} N(u_s, \sigma^2)$ for every
+    data point $i\in(t_{s-1},t_s]$ implies square loss function
+    $\ell(u_s, z_i)=(u_s-z_i)^2$ to minimize.
+
+```{r plotcos, dev='tikz', fig.height=4}
+one.dt <- nb.dt[J("4", "2")]
+max.segments <- 4
+logratio <- one.dt[["logratio"]]
+opt <- jointseg::Fpsn(logratio, max.segments)
+cum.end <- cumsum(logratio)
+cum.start <- c(0,cum.end)
+end <- t(opt[["t.est"]])
+start <- rbind(1, end[-max.segments,]+1)
+n.data <- end-start+1
+seg.sum <- cum.end[end]-cum.start[start]
+segs.dt <- data.table(
+  algorithm=a("optimal"),
+  segments=as.integer(col(end)),
+  start=as.integer(start),
+  end=as.integer(end),
+  mean=as.numeric(seg.sum/n.data)
+)[!is.na(mean)]
+one.dt[, data.i := .I]
+
+show.segs <- segs.dt[segments==max.segments]
+show.changes <- show.segs[1 < start]
+show.changes[, change.i := .I]
+show.segs[, seg.i := .I]
+model.color <- "blue"
+text.size <- 5
+ggplot()+
+  ggtitle(sprintf(
+    "Optimal model for $n=%d$ data and $S=%d$ segments",
+    nrow(one.dt), max.segments))+
+  theme(text=element_text(size=20))+
+  geom_point(aes(
+    data.i, logratio),
+    shape=1,
+    data=one.dt)+
+  geom_segment(aes(
+    start-0.5, mean,
+    xend=end+0.5, yend=mean),
+    color=model.color,
+    size=1,
+    data=show.segs)+
+  geom_vline(aes(
+    xintercept=start-0.5),
+    data=show.changes,
+    size=1,
+    color=model.color)+
+  coord_cartesian(xlim=c(-20, max(one.dt[["data.i"]])))+
+  scale_x_continuous(
+    "Position/index in data sequence")+
+  scale_y_continuous(
+    "logratio = noisy DNA\ncopy number measurement")+
+  geom_text(aes(
+    start+0.5, -Inf,
+    label=sprintf("$t_%d=%d$", change.i, start-1)),
+    color=model.color,
+    size=text.size,
+    hjust=0,
+    vjust=-0.5,
+    data=show.changes)+
+  geom_text(aes(
+    start-1.5, mean,
+    label=sprintf("$u_%d=%.4f$", seg.i, mean)),
+    color=model.color,
+    size=text.size,
+    hjust=1,
+    data=show.segs)
+
+```
+
+---
+
+# Maximum likelihood inference for $S$ segments and $n$ data
+
+The best loss for $S$ segments and $n$ data is
+```{=latex}
+\begin{eqnarray*}
+  \mathcal L_{S,n} &=& \min_{\substack{
+  \mathbf u\in\mathbb R^{S}
+\\
+   0=t_0<t_1<\cdots<t_{S-1}<t_S=n
+  }} 
+    \sum_{s=1}^S\  \sum_{i=t_{s-1}+1}^{t_s} \ell( u_s,  z_i) 
+\\
+&=&\min_{t_{S-1}}\underbrace{
+\min_{\substack{
+u_1,\dots,u_{S-1}\\
+t_1<\cdots<t_{S-2}
+}}
+  \sum_{s=1}^{S-1}\  \sum_{i=t_{s-1}+1}^{t_s} \ell( u_s,  z_i)
+}_{
+\mathcal L_{S-1, t_{S-1}}
+} +
+\underbrace{\min_{u_S} \sum_{i=t_{S-1}+1}^{t_S=n} \ell( u_S,  z_i)}_{
+c_{(t_{S-1}, t_S=n]}
+}
+%      \text{subject to \hskip 0.75cm} &\ \ \alert<3>{u_{s-1} \leq u_s\ \forall s\in\{2,4,\dots\},}  \nonumber\\
+%  &\ \ \alert<3>{u_{s-1} \geq u_s\ \forall s\in\{3,5,\dots\}.}  \nonumber 
+\end{eqnarray*}
+```
+
+- Hard optimization problem because of integer-valued changepoint $t_s$
+  variables, naively $O(n^S)$ time.
+- Auger and Lawrence (1989): $O(Sn^2)$ time classical dynamic
+  programming algorithm (best loss computed recursively).
+$$
+\mathcal L_{s,t}=\min_{t'<t} \mathcal L_{s-1,t'} + c_{(t', t]}
+$$
+
+---
+
+# First step of dynamic programming
+
+```{r}
+N.data <- length(logratio)
+loss.mat <- matrix(NA, N.data, max.segments)
+cum.vec <- cumsum(logratio)
+cum.sq.vec <- cumsum(logratio^2)
+N.vec <- 1:N.data
+loss.mat[,1] <- cum.sq.vec-cum.vec^2/N.vec
+loss.dt <- data.table(
+  data.i=N.vec,
+  mean=cum.vec/N.vec,
+  loss=loss.mat[,1])
+gg <- ggplot()+
+  scale_x_continuous(
+    "Position/index in data sequence")+
+  scale_y_continuous("")+
+  geom_point(aes(
+    data.i, logratio),
+    shape=1,
+    data=data.table(panel="data", one.dt))+
+  geom_point(aes(
+    data.i+0.5, loss),
+    shape=1,
+    data=data.table(panel="loss", loss.dt))+
+  facet_grid(panel ~ ., scales="free")
+loss1 <- function(end){
+  seg.dt <- loss.dt[end]
+  gg+
+    geom_vline(aes(
+      xintercept=data.i+0.5),
+      color=model.color,
+      size=1,
+      data=seg.dt)+
+    geom_segment(aes(
+      0.5, mean,
+      xend=data.i+0.5, yend=mean),
+      data=data.table(panel="data", seg.dt),
+      size=1,
+      color=model.color)
+}
+loss1(1)
+```
+
+--- 
+
+# First step of dynamic programming
+
+```{r}
+loss1(10)
+```
+
+--- 
+
+# First step of dynamic programming
+
+```{r}
+loss1(100)
+```
+
+--- 
+
+# First step of dynamic programming
+
+```{r}
+loss1(nrow(one.dt))
+```

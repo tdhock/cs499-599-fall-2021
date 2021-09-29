@@ -317,11 +317,12 @@ show.changes[, change.i := .I]
 show.segs[, seg.i := .I]
 model.color <- "blue"
 text.size <- 5
+theme.big <- theme(text=element_text(size=20))
 ggplot()+
+  theme.big+
   ggtitle(sprintf(
     "Optimal model for $n=%d$ data and $S=%d$ segments",
     nrow(one.dt), max.segments))+
-  theme(text=element_text(size=20))+
   geom_point(aes(
     data.i, logratio),
     shape=1,
@@ -403,7 +404,7 @@ $$
 
 # First step of dynamic programming
 
-```{r}
+```{r, dev='tikz', results="asis"}
 N.data <- length(logratio)
 loss.mat <- matrix(NA, N.data, max.segments)
 cum.vec <- cumsum(logratio)
@@ -415,9 +416,11 @@ loss.dt <- data.table(
   mean=cum.vec/N.vec,
   loss=loss.mat[,1])
 gg <- ggplot()+
+  theme.big+
   scale_x_continuous(
     "Position/index in data sequence")+
-  scale_y_continuous("")+
+  scale_y_continuous(
+    "")+
   geom_point(aes(
     data.i, logratio),
     shape=1,
@@ -425,16 +428,34 @@ gg <- ggplot()+
   geom_point(aes(
     data.i+0.5, loss),
     shape=1,
+    color=model.color,
     data=data.table(panel="loss", loss.dt))+
+  geom_blank(aes(x,y), data=data.table(panel="loss", x=270, y=-3))+
   facet_grid(panel ~ ., scales="free")
 loss1 <- function(end){
   seg.dt <- loss.dt[end]
+  cat("
+$$
+\\mathcal L_{1,t}= c_{(0, t]}
+$$
+")
   gg+
     geom_vline(aes(
       xintercept=data.i+0.5),
       color=model.color,
       size=1,
       data=seg.dt)+
+    geom_text(aes(
+      data.i+0.5,
+      loss,
+      ##10,
+      label=sprintf("$\\mathcal L_{1,%d}=%.2f$", data.i, loss)),
+      color=model.color,
+      ##hjust=if(end<(nrow(one.dt)/2))0 else 1,
+      hjust=0,
+      vjust=1.3,
+      size=text.size,
+      data=data.table(panel="loss", seg.dt))+
     geom_segment(aes(
       0.5, mean,
       xend=data.i+0.5, yend=mean),
@@ -449,7 +470,7 @@ loss1(1)
 
 # First step of dynamic programming
 
-```{r}
+```{r, dev='tikz', results="asis"}
 loss1(10)
 ```
 
@@ -457,7 +478,7 @@ loss1(10)
 
 # First step of dynamic programming
 
-```{r}
+```{r, dev='tikz', results="asis"}
 loss1(100)
 ```
 
@@ -465,6 +486,33 @@ loss1(100)
 
 # First step of dynamic programming
 
-```{r}
+```{r, dev='tikz', results="asis"}
 loss1(nrow(one.dt))
 ```
+
+---
+
+# Efficient computation of c values
+
+The best square loss up to $t$ is
+$$
+c_{(0, t]} = \min_u \sum_{i=1}^t (u - z_i)^2 =
+t\hat u_t^2 - 2\hat u_t\sum_{i=1}^t z_i + \sum_{i=1}^t z_i^2.
+$$
+
+We can use cumulative sum to compute $S_t$ for all $t$ in linear
+$O(t)$ time,
+$S_t = \sum_{i=1}^t z_i.$
+
+As can all best means up to $t$,
+$\hat u_t = S_t / t.$
+
+As can cumulative sum of squares can also be computed in linear time,
+$Q_t = \sum_{i=1}^t z_i^2.$
+
+All best loss values up to $t$ can also be computed in linear time,
+$$ 
+t\hat u_t^2 - 2\hat u_t\sum_{i=1}^t z_i + \sum_{i=1}^t z_i^2 =
+t (S_t/t)^2 - 2(S_t/t)(S_t) + Q_t = 
+Q_t-S_t^2/t.
+$$

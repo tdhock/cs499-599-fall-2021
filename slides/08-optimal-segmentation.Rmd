@@ -412,7 +412,9 @@ cum.sq.vec <- cumsum(logratio^2)
 N.vec <- 1:N.data
 loss.mat[,1] <- cum.sq.vec-cum.vec^2/N.vec
 loss.dt <- data.table(
-  data.i=N.vec,
+  segment=1,
+  start=1,
+  end=N.vec,
   mean=cum.vec/N.vec,
   loss=loss.mat[,1])
 gg <- ggplot()+
@@ -426,7 +428,7 @@ gg <- ggplot()+
     shape=1,
     data=data.table(panel="data", one.dt))+
   geom_point(aes(
-    data.i+0.5, loss),
+    end+0.5, loss),
     shape=1,
     color=model.color,
     data=data.table(panel="loss", loss.dt))+
@@ -441,15 +443,15 @@ $$
 ")
   gg+
     geom_vline(aes(
-      xintercept=data.i+0.5),
+      xintercept=end+0.5),
       color=model.color,
       size=1,
       data=seg.dt)+
     geom_text(aes(
-      data.i+0.5,
+      end+0.5,
       loss,
       ##10,
-      label=sprintf("$\\mathcal L_{1,%d}=%.2f$", data.i, loss)),
+      label=sprintf("$\\mathcal L_{1,%d}=%.2f$", end, loss)),
       color=model.color,
       ##hjust=if(end<(nrow(one.dt)/2))0 else 1,
       hjust=0,
@@ -458,7 +460,7 @@ $$
       data=data.table(panel="loss", seg.dt))+
     geom_segment(aes(
       0.5, mean,
-      xend=data.i+0.5, yend=mean),
+      xend=end+0.5, yend=mean),
       data=data.table(panel="data", seg.dt),
       size=1,
       color=model.color)
@@ -516,3 +518,26 @@ t\hat u_t^2 - 2\hat u_t\sum_{i=1}^t z_i + \sum_{i=1}^t z_i^2 =
 t (S_t/t)^2 - 2(S_t/t)(S_t) + Q_t = 
 Q_t-S_t^2/t.
 $$
+
+---
+
+# Second step of dynamic programming
+
+```{r}
+rev.data.vec <- rev(logratio)
+cum.rev.sq.vec <- cumsum(rev.data.vec^2)
+cum.rev.vec <- cumsum(rev.data.vec)
+(last.seg.dt <- data.table(
+  segment=2,
+  start=rev(N.vec),
+  end=N.data,
+  mean=cum.rev.vec/N.vec,
+  loss=cum.rev.sq.vec-cum.rev.vec^2/N.vec))
+total.dt <- rbind(
+  data.table(type="prev", last_start=seq(2, N.data), loss.dt[seq(1, .N-1)]),
+  data.table(type="last", last_start=seq(2, N.data), last.seg.dt[seq(.N-1, 1)]))
+total.dt[, .(
+  loss=sum(loss)
+), by=last_start]
+
+```

@@ -303,7 +303,6 @@ start <- rbind(1, end[-max.segments,]+1)
 n.data <- end-start+1
 seg.sum <- cum.end[end]-cum.start[start]
 segs.dt <- data.table(
-  algorithm=a("optimal"),
   segments=as.integer(col(end)),
   start=as.integer(start),
   end=as.integer(end),
@@ -402,21 +401,23 @@ $$
 
 ---
 
-# First step of dynamic programming
+# Initialization of dynamic programming
 
 ```{r, dev='tikz', results="asis"}
 N.data <- length(logratio)
 loss.mat <- matrix(NA, N.data, max.segments)
-cum.vec <- cumsum(logratio)
-cum.sq.vec <- cumsum(logratio^2)
-N.vec <- 1:N.data
-loss.mat[,1] <- cum.sq.vec-cum.vec^2/N.vec
-loss.dt <- data.table(
-  segment=1,
-  start=1,
-  end=N.vec,
-  mean=cum.vec/N.vec,
-  loss=loss.mat[,1])
+cum.mat <- rbind(
+  data=cumsum(logratio),
+  square=cumsum(logratio^2),
+  N=1:N.data)
+getLoss <- function(mat){  
+  data.table(t(mat))[, `:=`(
+    mean=data/N,
+    loss=square-data^2/N
+  )][]
+}
+loss.dt <- getLoss(cum.mat)
+loss.mat[,1] <- loss.dt[["loss"]]
 gg <- ggplot()+
   theme.big+
   scale_x_continuous(
@@ -428,7 +429,7 @@ gg <- ggplot()+
     shape=1,
     data=data.table(panel="data", one.dt))+
   geom_point(aes(
-    end+0.5, loss),
+    N+0.5, loss),
     shape=1,
     color=model.color,
     data=data.table(panel="loss", loss.dt))+
@@ -470,7 +471,7 @@ loss1(1)
 
 --- 
 
-# First step of dynamic programming
+# Initialization of dynamic programming
 
 ```{r, dev='tikz', results="asis"}
 loss1(10)
@@ -478,7 +479,7 @@ loss1(10)
 
 --- 
 
-# First step of dynamic programming
+# Initialization of dynamic programming
 
 ```{r, dev='tikz', results="asis"}
 loss1(100)
@@ -486,7 +487,7 @@ loss1(100)
 
 --- 
 
-# First step of dynamic programming
+# Initialization of dynamic programming
 
 ```{r, dev='tikz', results="asis"}
 loss1(nrow(one.dt))
@@ -509,7 +510,7 @@ $S_t = \sum_{i=1}^t z_i.$
 As can all best means up to $t$,
 $\hat u_t = S_t / t.$
 
-As can cumulative sum of squares can also be computed in linear time,
+As can cumulative sum of squares,
 $Q_t = \sum_{i=1}^t z_i^2.$
 
 All best loss values up to $t$ can also be computed in linear time,
@@ -521,23 +522,247 @@ $$
 
 ---
 
-# Second step of dynamic programming
+# First iteration/changepoint of dynamic programming
 
-```{r}
-rev.data.vec <- rev(logratio)
-cum.rev.sq.vec <- cumsum(rev.data.vec^2)
-cum.rev.vec <- cumsum(rev.data.vec)
-(last.seg.dt <- data.table(
-  segment=2,
-  start=rev(N.vec),
-  end=N.data,
-  mean=cum.rev.vec/N.vec,
-  loss=cum.rev.sq.vec-cum.rev.vec^2/N.vec))
-total.dt <- rbind(
-  data.table(type="prev", last_start=seq(2, N.data), loss.dt[seq(1, .N-1)]),
-  data.table(type="last", last_start=seq(2, N.data), last.seg.dt[seq(.N-1, 1)]))
-total.dt[, .(
-  loss=sum(loss)
-), by=last_start]
+```{r, dev='tikz', results="asis"}
+best.segs.list <- split(
+  loss.dt[, .(start=1, end=N, mean)],
+  paste(1, loss.dt[["N"]]))
+loss.list <- list()
+for(n.segs in 2:max.segments){
+  for(up.to in n.segs:N.data){
+    last.start <- n.segs:up.to
+    prev.end <- last.start-1
+    last.dt <- getLoss(cum.mat[,up.to] - cum.mat[,prev.end])
+    loss.choices <- data.table(
+      prev.end,
+      last_mean=last.dt[["mean"]],
+      prev_loss=loss.mat[prev.end,n.segs-1],
+      last_loss=last.dt[["loss"]])
+    loss.choices[, total_loss := prev_loss + last_loss ]
+    loss.list[[paste(n.segs, up.to)]] <- loss.choices
+    best.choice <- loss.choices[which.min(total_loss)]
+    prev.segs <- best.segs.list[[
+      paste(n.segs-1, best.choice[["prev.end"]])
+      ]]
+    last.seg <- best.choice[, .(
+      start=prev.end+1, end=up.to, mean=last_mean)]
+    best.segs.list[[paste(n.segs, up.to)]] <- rbind(
+      prev.segs, last.seg)
+    loss.mat[up.to,n.segs] <- best.choice[["total_loss"]]
+  }
+}
 
+showChoice <- function(up.to, n.segs, choice){
+  cat(sprintf("
+$$
+\\mathcal L_{%d,t}= \\min_{t'<t} \\mathcal L_{%d,t'} + c_{(t', t]}
+$$
+", n.segs, n.segs-1))
+  loss.choices <- loss.list[[paste(n.segs, up.to)]]
+  chosen.loss <- loss.choices[prev.end==choice]
+  prev.segs <- best.segs.list[[paste(n.segs-1, choice)]]
+  show.segs <- rbind(
+    data.table(type="prev", prev.segs),
+    chosen.loss[, .(
+      type="last",
+      start=prev.end+1,
+      end=up.to,
+      mean=last_mean)])
+  loss.tall <- nc::capture_melt_single(
+    loss.choices,
+    type=".*?",
+    "_loss")
+  chosen.loss.tall <- loss.tall[prev.end==choice]
+  loss.min <- loss.tall[type=="total"][which.min(value)]
+  ## type.colors <- c(
+  ##   last=model.color,
+  ##   prev="red",
+  ##   total="black")
+  gg <- ggplot()+
+    theme.big+
+    scale_x_continuous(
+      "Position/index in data sequence")+
+    scale_y_continuous(
+      "")+
+    geom_point(aes(
+      data.i, logratio),
+      shape=1,
+      data=data.table(panel="data", one.dt))+
+    geom_point(aes(
+      prev.end+0.5, value, color=type),
+      shape=1,
+      data=data.table(panel="loss", loss.tall))+
+    geom_segment(aes(
+      start-0.5, mean,
+      xend=end+0.5, yend=mean,
+      color=type),
+      size=2,
+      data=data.table(panel="data", show.segs))+
+    geom_vline(aes(
+      xintercept=prev.end+0.5, 
+      color=type),
+      data=data.table(chosen.loss, type="total"))+
+    geom_vline(aes(
+      xintercept=data.i),
+      data=data.table(data.i=up.to))+
+    geom_text(aes(
+      data.i, -Inf,
+      hjust=ifelse(data.i<N.data/2, 0, 1),
+      label=sprintf("$t=%d$", data.i)),
+      size=text.size,
+      vjust=0,
+      data=data.table(data.i=up.to, panel="data"))+
+    geom_text(aes(
+      prev.end+0.5, -Inf,
+      color=type,
+      label=sprintf("$t'=%d$", prev.end)),
+      size=text.size,
+      hjust=0,
+      vjust=0,
+      data=data.table(chosen.loss, type="total", panel="data"))+
+    ## geom_text(aes(
+    ##   prev.end+0.5,
+    ##   value,
+    ##   color=type,
+    ##   label=sprintf("$\\mathcal L_{%d,%d}=%.2f$", n.segs-1, prev.end, value)),
+    ##   hjust=0,
+    ##   vjust=1.3,
+    ##   size=text.size,
+    ##   data=data.table(panel="loss", chosen.loss.tall))+
+    ## geom_text(aes(
+    ##   -Inf,
+    ##   value,
+    ##   color=type,
+    ##   label=sprintf("$\\mathcal L_{%d,%d}=%.2f$", n.segs, up.to, value)),
+    ##   hjust=0,
+    ##   vjust=1,
+    ##   size=text.size,
+    ##   data=data.table(panel="loss", loss.min))+
+    geom_label(aes(
+      prev.end+0.5,
+      value,
+      color=type,
+      label=sprintf(
+        "$t^*=%d$",
+        prev.end)),
+      vjust=1,
+      label.size=0,
+      alpha=0.5,
+      size=text.size,
+      data=data.table(panel="loss", loss.min))+
+    geom_label(aes(
+      prev.end+0.5,
+      value,
+      color=type,
+      label=sprintf(
+        "$\\mathcal L_{%d,%d}=%.2f$",
+        n.segs, up.to, value)),
+      vjust=2,
+      label.size=0,
+      alpha=0.5,
+      size=text.size,
+      data=data.table(panel="loss", loss.min))+
+    geom_point(aes(
+      prev.end+0.5,
+      value,
+      color=type),
+      data=data.table(panel="loss", loss.min))+
+    ## geom_hline(aes(
+    ##   yintercept=value,
+    ##   color=type),
+    ##   data=data.table(panel="loss", loss.min))+
+    geom_blank(aes(x,y), data=data.table(panel="loss", x=0, y=-1))+
+    facet_grid(panel ~ ., scales="free")
+  gg
+}
+showChoice(30, 2, 10)
+```
+
+---
+
+# First iteration/changepoint of dynamic programming
+
+```{r, dev='tikz', results="asis"}
+showChoice(30, 2, 20)
+```
+
+---
+
+# First iteration/changepoint of dynamic programming
+
+```{r, dev='tikz', results="asis"}
+showChoice(100, 2, 10)
+```
+
+---
+
+# First iteration/changepoint of dynamic programming
+
+```{r, dev='tikz', results="asis"}
+showChoice(100, 2, 41)
+```
+
+---
+
+# First iteration/changepoint of dynamic programming
+
+```{r, dev='tikz', results="asis"}
+showChoice(100, 2, 80)
+```
+
+---
+
+# First iteration/changepoint of dynamic programming
+
+```{r, dev='tikz', results="asis"}
+showChoice(234, 2, 10)
+```
+
+---
+
+# First iteration/changepoint of dynamic programming
+
+```{r, dev='tikz', results="asis"}
+showChoice(234, 2, 41)
+```
+
+---
+
+# First iteration/changepoint of dynamic programming
+
+```{r, dev='tikz', results="asis"}
+showChoice(234, 2, 80)
+```
+
+---
+
+# First iteration/changepoint of dynamic programming
+
+```{r, dev='tikz', results="asis"}
+showChoice(234, 2, 150)
+```
+
+---
+
+# Second iteration/changepoint of dynamic programming
+
+```{r, dev='tikz', results="asis"}
+showChoice(150, 3, 20)
+```
+
+---
+
+# Second iteration/changepoint of dynamic programming
+
+```{r, dev='tikz', results="asis"}
+showChoice(150, 3, 113)
+```
+
+---
+
+# Second iteration/changepoint of dynamic programming
+
+```{r, dev='tikz', results="asis"}
+showChoice(150, 3, 130)
 ```

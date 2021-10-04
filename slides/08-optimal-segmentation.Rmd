@@ -420,10 +420,6 @@ $$
 \mathcal L_{s,t}=\min_{t'<t} \mathcal L_{s-1,t'} + c_{(t', t]}
 $$
 
----
-
-# Initialization of dynamic programming
-
 ```{r, dev='tikz', results="asis"}
 N.data <- length(logratio)
 loss.mat <- matrix(NA, N.data, max.segments)
@@ -458,17 +454,32 @@ gg <- ggplot()+
   facet_grid(panel ~ ., scales="free")
 loss1 <- function(end){
   seg.dt <- loss.dt[end]
+  
   cat("
 $$
 \\mathcal L_{1,t}= c_{(0, t]}
 $$
 ")
+  some.tiles <- data.table(loss.tiles)
+  some.tiles[data.i > end | segments > 1, loss := NA]
   gg+
     geom_vline(aes(
       xintercept=end+0.5),
       color=model.color,
       size=1,
       data=seg.dt)+
+    geom_raster(aes(
+      data.i+0.5, segments,
+      fill=loss),
+      data=data.table(some.tiles, panel="matrix"))+
+    geom_tile(aes(
+      data.i+0.5, segments),
+      color="black",
+      fill="transparent",
+      data=data.table(loss.tiles, panel="matrix"))+
+    scale_fill_gradient(
+      low="white", high="red", 
+      limits=range(loss.tiles$loss, na.rm=TRUE))+
     geom_text(aes(
       end+0.5,
       loss,
@@ -487,65 +498,6 @@ $$
       size=1,
       color=model.color)
 }
-loss1(1)
-```
-
---- 
-
-# Initialization of dynamic programming
-
-```{r, dev='tikz', results="asis"}
-loss1(10)
-```
-
---- 
-
-# Initialization of dynamic programming
-
-```{r, dev='tikz', results="asis"}
-loss1(100)
-```
-
---- 
-
-# Initialization of dynamic programming
-
-```{r, dev='tikz', results="asis"}
-loss1(nrow(one.dt))
-```
-
----
-
-# Efficient computation of c values
-
-The best square loss up to $t$ is
-$$
-c_{(0, t]} = \min_u \sum_{i=1}^t (u - z_i)^2 =
-t\hat u_t^2 - 2\hat u_t\sum_{i=1}^t z_i + \sum_{i=1}^t z_i^2.
-$$
-
-We can use cumulative sum to compute $S_t$ for all $t$ in linear
-$O(t)$ time,
-$S_t = \sum_{i=1}^t z_i.$
-
-As can all best means up to $t$,
-$\hat u_t = S_t / t.$
-
-As can cumulative sum of squares,
-$Q_t = \sum_{i=1}^t z_i^2.$
-
-All best loss values up to $t$ can also be computed in linear time,
-$$ 
-t\hat u_t^2 - 2\hat u_t\sum_{i=1}^t z_i + \sum_{i=1}^t z_i^2 =
-t (S_t/t)^2 - 2(S_t/t)(S_t) + Q_t = 
-Q_t-S_t^2/t.
-$$
-
----
-
-# First iteration/changepoint of dynamic programming
-
-```{r, dev='tikz', results="asis"}
 best.segs.list <- split(
   loss.dt[, .(start=1, end=N, mean)],
   paste(1, loss.dt[["N"]]))
@@ -573,8 +525,15 @@ for(n.segs in 2:max.segments){
     loss.mat[up.to,n.segs] <- best.choice[["total_loss"]]
   }
 }
+loss.tiles <- data.table(
+  data.i=as.integer(row(loss.mat)),
+  segments=as.integer(col(loss.mat)),
+  loss=as.numeric(loss.mat))
+loss.tiles[loss<0, loss := 0]
 
 showChoice <- function(up.to, n.segs, choice){
+  some.tiles <- data.table(loss.tiles)
+  some.tiles[(segments==n.segs & data.i>up.to) | segments>n.segs, loss := NA]
   cat(sprintf("
 $$
 \\mathcal L_{%d,t}= \\min_{t'<t} \\mathcal L_{%d,t'} + c_{(t', t]}
@@ -627,6 +586,18 @@ $$
     geom_vline(aes(
       xintercept=data.i),
       data=data.table(data.i=up.to))+
+    geom_raster(aes(
+      data.i, segments,
+      fill=loss),
+      data=data.table(some.tiles, panel="matrix"))+
+    geom_tile(aes(
+      data.i, segments),
+      color="black",
+      fill="transparent",
+      data=data.table(loss.tiles, panel="matrix"))+
+    scale_fill_gradient(
+      low="white", high="red",
+      limits=range(loss.tiles$loss, na.rm=TRUE))+
     geom_text(aes(
       data.i, Inf,
       hjust=ifelse(data.i<N.data/2, 0, 1),
@@ -699,6 +670,72 @@ $$
     facet_grid(panel ~ ., scales="free")
   gg
 }
+```
+
+---
+
+# Initialization of dynamic programming
+
+```{r, dev='tikz', results="asis"}
+loss1(1)
+```
+
+--- 
+
+# Initialization of dynamic programming
+
+```{r, dev='tikz', results="asis"}
+loss1(10)
+```
+
+--- 
+
+# Initialization of dynamic programming
+
+```{r, dev='tikz', results="asis"}
+loss1(100)
+```
+
+--- 
+
+# Initialization of dynamic programming
+
+```{r, dev='tikz', results="asis"}
+loss1(nrow(one.dt))
+```
+
+---
+
+# Efficient computation of c values
+
+The best square loss up to $t$ is
+$$
+c_{(0, t]} = \min_u \sum_{i=1}^t (u - z_i)^2 =
+t\hat u_t^2 - 2\hat u_t\sum_{i=1}^t z_i + \sum_{i=1}^t z_i^2.
+$$
+
+We can use cumulative sum to compute $S_t$ for all $t$ in linear
+$O(t)$ time,
+$S_t = \sum_{i=1}^t z_i.$
+
+As can all best means up to $t$,
+$\hat u_t = S_t / t.$
+
+As can cumulative sum of squares,
+$Q_t = \sum_{i=1}^t z_i^2.$
+
+All best loss values up to $t$ can also be computed in linear time,
+$$ 
+t\hat u_t^2 - 2\hat u_t\sum_{i=1}^t z_i + \sum_{i=1}^t z_i^2 =
+t (S_t/t)^2 - 2(S_t/t)(S_t) + Q_t = 
+Q_t-S_t^2/t.
+$$
+
+---
+
+# First iteration/changepoint of dynamic programming
+
+```{r, dev='tikz', results="asis"}
 showChoice(30, 2, 10)
 ```
 

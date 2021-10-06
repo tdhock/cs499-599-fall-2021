@@ -47,7 +47,7 @@ You need to upload your code to a GitHub repository (you need a free
 GitHub account so please create one if you don't have one yet). Your
 repo should NOT include any files except source code/docs/tests/etc
 required to build the package (e.g. you will get minus points if there
-is a .Rhistory file in your github repo).
+is a .Rhistory file, or compiled binary *.o *.so *.dll files, in your github repo).
 
 You need to setup [[https://orchid00.github.io/actions_sandbox/packageci.html#actions-for-continuous-integration-checks][GitHub Actions for continuous integration checks]] of
 your R package. This will run the standard package checks, and your

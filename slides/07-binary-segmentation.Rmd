@@ -503,6 +503,180 @@ ggplot()+
 
 ---
 
+# Complexity analysis
+
+- Assume $n$ data and $K$ segments.
+- Computing best loss decrease and split point for a segment with $t$
+  data takes $O(t)$ time.
+- Keep a list of segments which could be split, sorted by loss
+  decrease values.
+- Best case is when segments get cut in half each time, $O(n \log K)$
+  time. (minimize number of possible splits for which we have to recompute loss)
+- Worst case is when splits are very unequal (1, $t-1$), $O(n K)$
+  time. (maximize number of possible splits for which we have to
+  recompute loss)
+
+---
+
+# Real data time complexity analysis
+
+```{r, fig.height=4}
+N.exp <- 6
+N.data <- 2^N.exp
+N.exp.seq <- 1:N.exp
+(size.after.split <- as.integer(N.data/rep(2^N.exp.seq, 2^(N.exp.seq-1))))
+new.splits <- data.table(
+  best=(size.after.split-1)*2,
+  worst=seq(N.data-2, 0))
+split.dt.list <- list()
+for(case in names(new.splits)){
+  split.dt.list[[case]] <- data.table(
+    case,
+    segments=seq(1, N.data),
+    splits=c(N.data-1, new.splits[[case]]))
+}
+(split.dt <- do.call(rbind, split.dt.list))
+(splits.wide <- dcast(split.dt, segments ~ case, value.var="splits"))
+approx.dt <- one.dt[, {
+  pos <- seq(min(position), max(position), l=N.data)
+  data.table(
+    pos,
+    data.i=seq_along(pos),
+    logratio=approx(position, logratio, pos)[["y"]])
+}]
+data.list <- list(
+  linear=1:N.data,#best
+  sin=sin((1:N.data)/2),
+  constant.noiseless=rep(0, N.data),
+  real=approx.dt[["logratio"]],
+  constant.noisy=rnorm(N.data),
+  exponential=2^(1:N.data),
+  up.and.down=(1:N.data) %% 2)#worst
+fit.dt.list <- list()
+data.dt.list <- list()
+for(data.name in names(data.list)){
+  bad.data.vec <- data.list[[data.name]]
+  fit <- binsegRcpp::binseg_normal(bad.data.vec)
+  coef.dt <- coef(fit, 2:5)
+  coef.dt[, panel := segments]
+  segs.dt.list[[data.name]] <- data.table(
+    data.name,
+    coef.dt)
+  data.dt.list[[data.name]] <- data.table(
+    data.name,
+    data.i=seq_along(bad.data.vec),
+    data.value=bad.data.vec
+    )
+  ##set(fit, j="data", value=bad.data.vec)#segfault TODO post issue.
+  ##fit[["data"]] <- bad.data.vec
+  fit.dt.list[[data.name]] <- data.table(
+    data.name,
+    data=bad.data.vec,
+    fit)
+}
+(fit.dt <- do.call(rbind, fit.dt.list))
+(data.dt <- do.call(rbind, data.dt.list))
+(segs.dt <- do.call(rbind, segs.dt.list))
+fit.dt[, splits := before.size-1+ifelse(is.na(after.size), 0, after.size-1)]
+showCase <- function(show.name){
+  show.data <- data.dt[data.name==show.name]
+  show.segs <- segs.dt[data.name==show.name]
+  show.fit <- fit.dt[data.name==show.name]
+  gg.data <- ggplot()+
+    geom_point(aes(
+      data.i, data.value),
+      data=show.data)+
+    geom_segment(aes(
+      start-0.5, mean,
+      xend=end+0.5, yend=mean),
+      data=show.segs,
+      size=2,
+      alpha=0.5,
+      color=model.color)+
+    geom_vline(aes(
+      xintercept=start-0.5),
+      data=show.segs[start>1],
+      color=model.color)+
+    facet_grid(segments ~ ., labeller=label_both)
+  print(gg.data)
+  emp.case <- paste0("empirical\n", show.name)
+  emp.case <- "empirical"
+  show.splits <- rbind(
+    split.dt,
+    show.fit[, .(case=emp.case, segments, splits)])
+  case.colors <- c("deepskyblue", "black", "red")
+  names(case.colors) <- c("worst", emp.case, "best")
+  show.totals <- show.splits[, .(total.splits=sum(splits)), by=case][
+    names(case.colors), on="case"]
+  show.totals[, label := sprintf("case=%s\nsplits=%d", case, total.splits)]
+  show.dl <- show.totals[show.splits, on="case"]
+  show.totals[, y := N.data-.I*5]
+  gg.splits <- ggplot()+
+    ggtitle(paste0(
+      "Number of splits for which loss is computed, empirical data type=",
+      show.name))+
+    geom_line(aes(
+      segments, splits, color=case),
+      data=show.splits[!grepl("empirical", case)])+
+    geom_point(aes(
+      segments, splits, color=case),
+      data=show.splits[grepl("empirical", case)])+
+    ## directlabels::geom_dl(aes(
+    ##   segments, splits, color=case, label=label),
+    ##   method="smart.grid",
+    ##   ##debug=TRUE,
+    ##   data=show.dl)+
+    geom_text(aes(
+      N.data, y, label=sprintf(
+        "%s case total splits=%d",
+        case, total.splits),
+      color=case),
+      hjust=1,
+      data=show.totals)+
+    scale_color_manual(
+      values=case.colors,
+      breaks=names(case.colors),
+      guide="none")
+  print(gg.splits)
+}
+
+showCase("real")
+```
+
+---
+
+# Synthetic data time complexity analysis
+
+```{r, fig.height=4}
+showCase("up.and.down")
+```
+
+---
+
+# Synthetic data time complexity analysis
+
+```{r, fig.height=4}
+showCase("exponential")
+```
+
+---
+
+# Synthetic data time complexity analysis
+
+```{r, fig.height=4}
+showCase("sin")
+```
+
+---
+
+# Synthetic data time complexity analysis
+
+```{r, fig.height=4}
+showCase("linear")
+```
+
+---
+
 # Comparison with previous algorithms from clustering
 
 - Binary segmentation has segment/cluster-specific mean parameter, as
@@ -522,21 +696,6 @@ ggplot()+
 
 ---
 
-# Complexity analysis
-
-- Assume $n$ data and $K$ segments.
-- Computing best loss decrease and split point for a segment with $t$
-  data takes $O(t)$ time.
-- Keep a list of segments which could be split, sorted by loss
-  decrease values.
-- Best case is when segments get cut in half each time, $O(n \log K)$
-  time. (minimize number of possible splits for which we have to recompute loss)
-- Worst case is when splits are very unequal (1, $t-1$), $O(n K)$
-  time. (maximize number of possible splits for which we have to
-  recompute loss)
-
----
-
 # Possible exam questions
 
 - Explain in detail one similarity and one difference between binary
@@ -545,4 +704,4 @@ ggplot()+
 - For a sequence of $n=10$ data, we need to compute the loss for each
   of the 9 possible splits in the first iteration of binary
   segmentation. What is the number of splits for which we must compute
-  the loss in the second step? (best and worst case)
+  the loss in the second/third steps? (best and worst case)

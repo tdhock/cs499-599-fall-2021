@@ -29,6 +29,15 @@ ESL by Hastie, Tibshirani, Friedman
   https://web.stanford.edu/~hastie/ElemStatLearn/ describes many
   machine learning algorithms from a statistics perspective.
 
+About computational complexity,
+- The [[https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book-Z-H-4.html#%25_toc_%25_sec_1.2.3][SICP]] book, 1.2.3 "Orders of Growth," has a brief description in
+  general terms (not specific to machine learning).
+- The [[https://arizona-nau.primo.exlibrisgroup.com/discovery/fulldisplay?vid=01NAU_INST:01NAU&search_scope=MyInst_and_CI&tab=Everything&docid=alma991007591689703842&lang=en&context=L&adaptor=Local%2520Search%2520Engine&query=any,contains,algorithms%2520introduction&offset=0&virtualBrowse=true][CLRS]] book has a more detailed description in Chapter 3, "Growth
+  of Functions" (not specific to machine learning).
+- Wikipedia usually has a good/accurate characterization of the
+  machine learning algorithms we study. For example [[https://en.wikipedia.org/wiki/K-means_clustering#Complexity][K-means
+  clustering, section Complexity]].
+
 *** For homeworks
 
 These provide practical advice about how to write the R code necessary

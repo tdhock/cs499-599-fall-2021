@@ -8,8 +8,8 @@ clustering.
 1. Split the zip.test data observations/rows into 50% train, 50%
    validation. Use base::set.seed and base::sample for pseudo-random
    assignment with a fixed seed. Use base::table(digit.label, set) to
-   print and display a contingency table. Are there about the same
-   number of each digit/label in each set?
+   print and display a contingency table. For each digit/label, is
+   there about the same number of observations in each set?
 
 2. Show that validation error can NOT be used as a model selection
    criterion for kmeans. Use stats::kmeans on the train data, for 1 to

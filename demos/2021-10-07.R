@@ -65,19 +65,40 @@ ggplot()+
     data=data.table(panel="loss", possible.dt))+
   facet_grid(panel ~ ., scales="free")
 
+## option 1: use a single data table with one row per split point
+## (includes both segments that could be split). This is a great
+## option because it includes the first step as a special case.
+segs.after.first.split <- possible.dt[which.min(total_loss), rbind(
+  data.table(first_seg_start=1, second_seg_end=first_seg_end),
+  data.table(first_seg_start=first_seg_end+1, second_seg_end=nrow(data.dt))
+)]
+segs.before.first.split <- data.table(
+  first_seg_start=1, second_seg_end=nrow(data.dt))
+make.possible <- function(segs.dt){
+  segs.dt[, data.table(
+    first_seg_end=seq(first_seg_start, second_seg_end-1)
+  ), by=.(first_seg_start, second_seg_end)]
+}
+make.possible(segs.before.first.split)
+(all.new.possible <- make.possible(segs.after.first.split))
+all.new.possible[, loss_decrease := TODO]
+all.new.possible[which.max(loss_decrease)]
+
+## option 2: for loop over two segments that could be split. Inside
+## for loop compute data table of only splits on that segment.
 new.segs <- possible.dt[which.min(total_loss), rbind(
   data.table(start=1, end=first_seg_end),
   data.table(start=first_seg_end+1, end=nrow(data.dt)))]
 for(seg.i in 1:nrow(new.segs)){
   one.seg <- new.segs[seg.i]
-  possible.dt <- one.seg[, data.table(
+  new.possible.dt <- one.seg[, data.table(
     first_seg_end=seq(start, end-1))]
-  possible.dt[, first_seg_loss := TODO]
-  possible.dt[, second_seg_loss := TODO]
-  possible.dt[, split_loss := {
+  new.possible.dt[, first_seg_loss := TODO]
+  new.possible.dt[, second_seg_loss := TODO]
+  new.possible.dt[, split_loss := {
     first_seg_loss+second_seg_loss
   }]
-  possible.dt[, no_split_loss := TODO]
-  possible.dt[, loss_decrease := no_split_loss-split_loss]
+  new.possible.dt[, no_split_loss := TODO]
+  new.possible.dt[, loss_decrease := no_split_loss-split_loss]
 }
-all.possible.dt[which.max(loss_decrease)]
+all.new.possible.dt[which.max(loss_decrease)]

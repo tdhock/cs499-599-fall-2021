@@ -482,10 +482,6 @@ ggplot()+
     color="red",
     data=data.table(
       y="loss on this segment", first.min.long))+
-  ## geom_point(aes(
-  ##   end+0.5, loss.decrease),
-  ##   shape=21,
-  ##   data=data.table(y="loss decrease", two.err))+
   geom_point(aes(
     new.end+0.5, loss),
     shape=21,
@@ -579,22 +575,29 @@ plot.iteration <- function(){
     ][, computed := "previously"],
     data.table(computed="this step", it.best.tall))
   it.vlines <- get_vlines(it.segs.dt)
+  computed.colors <- c(
+      "this step"="red",
+      "previously"="deepskyblue")
   gg <- ggplot()+
     facet_grid(panel ~ ., scales="free")+
-    scale_color_manual(values=c(
-      "this step"="red",
-      "previously"="deepskyblue"))+
+    geom_blank(aes(
+      0,0,color=computed),
+      data=data.table(computed=names(computed.colors)))+
+    scale_color_manual(
+      values=computed.colors,
+      breaks=names(computed.colors))+
     scale_x_continuous(
       limits=c(0, nrow(one.pid.chr)+1))+
     scale_y_continuous(
-      "logratio (noisy copy number measurement)")+
+      "logratio (noisy copy number measurement)",
+      labels=scales::scientific)+
     geom_point(aes(
       data.i, logratio),
       data=data.table(panel="data", one.pid.chr))+
     geom_point(aes(
       before_seg_end+0.5, loss_diff, color=computed),
       shape=1,
-      data=data.table(panel="loss decrease", it.possible.show))+
+      data=data.table(panel="loss difference", it.possible.show))+
     geom_vline(aes(
       xintercept=start-0.5,
       color=computed),

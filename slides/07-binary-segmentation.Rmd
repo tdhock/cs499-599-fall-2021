@@ -503,6 +503,206 @@ ggplot()+
 
 ---
 
+# Visualization of computations at each iteration
+
+```{r}
+one.pid.chr <- nb.dt[profile.id==2 & chromosome==2]
+one.pid.chr[, data.i := .I]
+cum.data.vec <- c(0, cumsum(one.pid.chr[["logratio"]]))
+possible_splits <- function(seg.dt){
+  some.segs <- seg.dt[full_seg_start<full_seg_end]
+  if(nrow(some.segs)==0)return(NULL)
+  possible.dt <- some.segs[, {
+    before_seg_end <- seq(full_seg_start, full_seg_end-1)
+    data.table(
+      before_seg_start=full_seg_start,
+      before_seg_end,
+      after_seg_start=before_seg_end+1L,
+      after_seg_end=full_seg_end
+    )
+  }, by=.(full_seg_start, full_seg_end)]
+  name <- function(suffix)paste0(seg_name, "_seg_", suffix)
+  value <- function(suffix)possible.dt[[name(suffix)]]
+  for(seg_name in c("before", "after", "full")){
+    end <- value("end")
+    start <- value("start")
+    N.data <- end-start+1
+    sum.data <- cum.data.vec[end+1]-cum.data.vec[start]
+    set(
+      possible.dt,
+      j=name("loss"),
+      value=-sum.data^2/N.data)
+    set(
+      possible.dt,
+      j=name("mean"),
+      value=sum.data/N.data)
+  }
+  possible.dt[
+  , split_loss := before_seg_loss + after_seg_loss][
+  , loss_diff := split_loss-full_seg_loss][]
+}
+get_segs <- function(best){
+  nc::capture_melt_multiple(
+    best,
+    seg="before|after",
+    "_seg_",
+    column="start|end|mean"
+  )[order(start)][, startChange := c(FALSE, TRUE)]
+}
+get_vlines <- function(segs){
+  segs[start>1][startChange==FALSE, computed := "previously"]
+}
+(prev.best.tall <- data.table(start=1L, end=nrow(one.pid.chr)))
+prev.best.i <- NULL
+plot.iteration <- function(){
+  (it.segs <- prev.best.tall[, .(
+    full_seg_start=start, full_seg_end=end)])
+  (it.possible <- possible_splits(it.segs))
+  prev.not.best <- if(!is.null(prev.best.i))prev.splits.dt[-prev.best.i]
+  it.possible.show <- rbind(
+    if(!is.null(prev.best.i))data.table(
+      computed="previously",
+      prev.not.best),
+    if(!is.null(it.possible))data.table(
+      computed="this step", it.possible))
+  (it.splits.dt <- rbind(
+    if(!is.null(prev.best.i))prev.not.best,
+    if(!is.null(it.possible))it.possible[, {
+      .SD[which.min(loss_diff)]
+    }, by=.(full_seg_start, full_seg_end)]))
+  it.best.i <- it.splits.dt[, which.min(loss_diff)]
+  it.best <- it.splits.dt[it.best.i]
+  it.best.tall <- get_segs(it.best)
+  it.segs.dt <- rbind(
+    if(!is.null(prev.best.i))prev.segs.dt[
+      !it.best, on=c(start="full_seg_start", end="full_seg_end")
+    ][, computed := "previously"],
+    data.table(computed="this step", it.best.tall))
+  it.vlines <- get_vlines(it.segs.dt)
+  gg <- ggplot()+
+    facet_grid(panel ~ ., scales="free")+
+    scale_color_manual(values=c(
+      "this step"="red",
+      "previously"="deepskyblue"))+
+    scale_x_continuous(
+      limits=c(0, nrow(one.pid.chr)+1))+
+    scale_y_continuous(
+      "logratio (noisy copy number measurement)")+
+    geom_point(aes(
+      data.i, logratio),
+      data=data.table(panel="data", one.pid.chr))+
+    geom_point(aes(
+      before_seg_end+0.5, loss_diff, color=computed),
+      shape=1,
+      data=data.table(panel="loss decrease", it.possible.show))+
+    geom_vline(aes(
+      xintercept=start-0.5,
+      color=computed),
+      data=data.table(
+        panel="data",
+        it.vlines[computed=="previously"]))+
+    geom_vline(aes(
+      xintercept=start-0.5,
+      color=computed),
+      data=it.vlines[computed=="this step"])+
+    geom_segment(aes(
+      start-0.5, mean,
+      color=computed,
+      xend=end+0.5, yend=mean),
+      size=2,
+      alpha=0.5,
+      data=data.table(panel="data", it.segs.dt))
+  suppressWarnings(print(gg))
+  prev.best.i <<- it.best.i
+  prev.best.tall <<- it.best.tall
+  prev.segs.dt <<- it.segs.dt
+  prev.splits.dt <<- it.splits.dt
+}
+plot.iteration()
+```
+
+---
+
+# Visualization of computations at each iteration
+
+```{r}
+plot.iteration()
+```
+
+---
+
+# Visualization of computations at each iteration
+
+```{r}
+plot.iteration()
+```
+
+---
+
+# Visualization of computations at each iteration
+
+```{r}
+plot.iteration()
+```
+
+---
+
+# Visualization of computations at each iteration
+
+```{r}
+plot.iteration()
+```
+
+---
+
+# Visualization of computations at each iteration
+
+```{r}
+plot.iteration()
+```
+
+---
+
+# Visualization of computations at each iteration
+
+```{r}
+plot.iteration()
+```
+
+---
+
+# Visualization of computations at each iteration
+
+```{r}
+plot.iteration()
+```
+
+---
+
+# Visualization of computations at each iteration
+
+```{r}
+plot.iteration()
+```
+
+---
+
+# Visualization of computations at each iteration
+
+```{r}
+plot.iteration()
+```
+
+---
+
+# Visualization of computations at each iteration
+
+```{r}
+plot.iteration()
+```
+
+---
+
 # Complexity analysis
 
 - Assume $n$ data and $K$ segments.
@@ -554,6 +754,7 @@ data.list <- list(
   up.and.down=(1:N.data) %% 2)#worst
 fit.dt.list <- list()
 data.dt.list <- list()
+segs.dt.list <- list()
 for(data.name in names(data.list)){
   bad.data.vec <- data.list[[data.name]]
   fit <- binsegRcpp::binseg_normal(bad.data.vec)

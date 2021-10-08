@@ -17,24 +17,25 @@ models for sequence data, and compare the speed of two R packages.
    more slowly? (that is the "good" model size which you should
    select)
 
-3. Make a ggplot of your selected model on top of the data set. For
-   simplicity instead of x=position (as in problem 1), use
-   x=seq_along(logratio) (which is just 1 to N, same scale as the
-   numbers returned by binseg_normal). Use geom_segment to show
-   segment means and geom_vline to show changepoints. Does the model
-   have any obvious false positives (changepoints predicted where the
-   data have no significant changes) or false negatives (no change
-   predicted where the data has a significant change)?
+3. Make a ggplot of your selected model on top of the data set, using
+   the coef method to extract a data table of segments. For simplicity
+   instead of x=position (as in problem 1), use x=seq_along(logratio)
+   (which is just 1 to N, same scale as the numbers returned by
+   binseg_normal). Use geom_segment to show segment means and
+   geom_vline to show changepoints. Does the model have any obvious
+   false positives (changepoints predicted where the data have no
+   significant changes) or false negatives (no change predicted where
+   the data has a significant change)?
 
 20 Extra credit points: Do a speed comparison of two different
 implementations of binary segmentation. Use
-changepoint::cpt.mean(logratio_vector, Q=100, method="BinSeg",
-penalty="Manual") to compute the same binary segmentation model, up to
-100 segments, on a wide range of data sequences (each data sequence is
-a unique combination of profile.id/chromosome values, each has a
-different number of rows, you should compute the binary segmentation
-models for the smallest/largest data sets and some in between). Use
-microbenchmark to compute timings of binsegRcpp with 100 segments as
+changepoint::cpt.mean(logratio_vector, Q=max.changes, method="BinSeg",
+penalty="Manual") to compute the same binary segmentation model on a
+wide range of data sequences (each data sequence is a unique
+combination of profile.id/chromosome values, each has a different
+number of rows, you should compute the binary segmentation models for
+the smallest/largest data sets and some in between). Use
+microbenchmark to compute timings of binsegRcpp with the same number of changepoints as
 well. Make a ggplot with log-log axes that compares the computation
 times of the two algorithms. (x=data size, y=seconds, color=package)
 Are there any significant speed differences?

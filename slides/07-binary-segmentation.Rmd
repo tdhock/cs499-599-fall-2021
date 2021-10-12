@@ -587,6 +587,7 @@ plot.iteration <- function(){
       values=computed.colors,
       breaks=names(computed.colors))+
     scale_x_continuous(
+      "data.i (position/index in data sequence)",
       limits=c(0, nrow(one.pid.chr)+1))+
     scale_y_continuous(
       "logratio (noisy copy number measurement)",

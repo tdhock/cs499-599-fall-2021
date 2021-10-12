@@ -1,0 +1,134 @@
+---
+title: "Hidden Markov Models"
+author: "Toby Dylan Hocking"
+output: beamer_presentation
+---
+
+```{r opts, echo=FALSE}
+knitr::opts_chunk$set(
+  echo=FALSE, results=FALSE,
+  fig.width=10,
+  fig.height=6)
+```
+
+# Background: detecting abrupt changes is important 
+
+Example from cancer diagnosis: breakpoints are associated with
+aggressive disease in neuroblastoma.
+
+```{r}
+suppressPackageStartupMessages({
+  library(data.table)
+  library(ggplot2)
+})
+data(neuroblastoma, package="neuroblastoma")
+nb.dt <- data.table(neuroblastoma[["profiles"]])
+setkey(nb.dt, profile.id, chromosome)
+one.dt <- nb.dt[J("4", "2")]
+ggplot()+
+  scale_x_continuous(
+    "Position/index in data sequence")+
+  scale_y_continuous(
+    "logratio (approximate DNA copy number)")+
+  geom_point(aes(
+    position, logratio),
+    data=one.dt)
+```
+
+---
+
+# Motivation for Hidden Markov Models (HMMs)
+
+- Sometimes we have an interpretation / expectation of what the
+  segments/clusters mean.
+- For example in DNA copy number data the logratio=0 means normal copy
+  number (two copies -- one from each parent), whereas higher logratio
+  values indicate gain/amplification and lower values indicate
+  loss/deletion.
+- HMMs have a hidden state variable which is associated with each
+  observed data variable in the sequence.
+- There are typically a finite number of hidden states/clusters,
+  $k\in\{1,\dots,K\}$.
+
+---
+
+# Baum-Welch learning algorithm
+
+Let $K$ be the number of hidden states. For every state we have
+- Let $A\in\mathbb [0,1]^{K\times K}$ be the transition matrix. Each
+  entry $a_{ij}$ is the probability of of being in state $i$ at some
+  time point $t$ and then at state $j$ at the next time point $t+1$.
+- Let $\pi_k$ be the initial state distribution (prior weights). 
+- There are also some emission distribution-specific parameters (mean,
+  covariance) that are used to define the probablity of observing data
+  $y$ in state $k$, $b_j(y)\in[0,1]$.
+- These parameters are unknown in advance and must be learned from the
+  data.
+- Comparison with Gaussian Mixture Models: HMM has all of GMM
+  parameters, plus transition matrix.
+
+---
+
+# Baum-Welch learning algorithm
+
+Let $K$ be the number of hidden states. For every state we have
+- Let $A\in\mathbb [0,1]^{K\times K}$ be the transition matrix. Each
+  entry $a_{ij}$ is the probability of of being in state $i$ at some
+  time point $t$ and then at state $j$ at the next time point $t+1$.
+- Let $\pi_k$ be the initial state distribution (prior weights). 
+- There are also some distribution-specific parameters (mean,
+  covariance) that are used to define the probablity of observing data
+  $y$ in state $k$, $b_j(y)\in[0,1]$.
+
+---
+
+# Computations
+
+```{r}
+n.states <- 3
+set.seed(1)
+rand.mat <- matrix(runif(n.states*n.states), n.states, n.states)
+(A.mat <- rand.mat/rowSums(rand.mat))
+mean.vec <- c(-1, 0, 1)*0.5
+sd.param <- 1
+rand.vec <- runif(n.states)
+pi.vec <- rand.vec/sum(rand.vec)
+y.vec <- one.dt[["logratio"]]
+N.data <- length(y.vec)
+alpha.mat <- matrix(NA, N.data, n.states)
+alpha.mat[1,] <- pi.vec * dnorm(y.vec[1], mean.vec, sd.param)
+for(data.t in 2:N.data){
+  alpha.mat[data.t,] <- dnorm(y.vec[data.t], mean.vec, sd.param)*
+    colSums(A.mat*matrix(alpha.mat[data.t-1,], n.states, n.states))
+}
+##http://bozeman.genome.washington.edu/compbio/mbt599_2006/hmm_scaling_revised.pdf
+elnsum <- function(elnx, elny){
+  fcase(
+    elnx == -Inf, elny,
+    elny == -Inf, elnx,
+    elny < elnx, elnx + log(1+exp(elny-elnx)),
+    elnx < elny, elny + log(1+exp(elnx-elny)))
+}
+elnproduct <- function(elnx, elny){
+  ifelse(
+    elnx == -Inf | elny == -Inf,
+    -Inf,
+    elnx+elny)
+}
+log.alpha.mat <- matrix(NA, N.data, n.states)
+log.alpha.mat[1,] <- elnproduct(
+  log(pi.vec), 
+  dnorm(y.vec[1], mean.vec, sd.param, log=TRUE))
+for(data.t in 2:N.data){
+  log.alpha.vec <- rep(-Inf, n.states)
+  for(state.i in 1:n.states){
+    prod.vec <- elnproduct(
+      log.alpha.mat[data.t-1,state.i],
+      log(A.mat[state.i,]))
+    log.alpha.vec <- elnsum(log.alpha.vec, prod.vec)
+  }
+  emission.prob.vec <- dnorm(y.vec[data.t], mean.vec, sd.param, log=TRUE)
+  log.alpha.mat[data.t,] <- elnproduct(log.alpha.vec, emission.prob.vec)
+}
+
+```

@@ -114,9 +114,10 @@ that week, 11:59PM.
     1-2. Binary segmentation. Section 5.2.2. Estimating the number of
     changes. section 6.
   - Quizzes changepoint 1, binary segmentation 1.
-- Oct 11, Homework week 8: Optimal segmentation
-  - Optimal detection [[file:slides/08-optimal-segmentation.pdf][slides]], [[https://arxiv.org/pdf/1801.00718.pdf][Truong et al]] 5.1. [[file:2020-10-12-dynamic-programming-slides.pdf][Models and cost functions, [[https://arxiv.org/pdf/1801.00718.pdf][Truong et al]]
-    section 4.
+- Oct 11, [[file:homeworks/08-dynamic-programming.org][Homework week 8]]: Optimal segmentation via dynamic programming.
+  - [[file:slides/08-optimal-segmentation.pdf][Slides]], [[https://arxiv.org/pdf/1801.00718.pdf][Truong et al]] sections 4.1.1 (Models and Cost functions,
+    Parametric Models, Maximum likelihood estimation), 5.1. (Optimal
+    detection).
   - Quizzes changepoint 2, optimal segmentation 1-2.
 - Oct 18, Homework week 9: Hidden Markov Models
   - [[file:depmixS4.pdf][depmixS4 vignette]] section 2. Markov Models, MLAPP-17.2. Hidden

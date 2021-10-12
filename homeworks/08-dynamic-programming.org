@@ -1,0 +1,74 @@
+Homework 8: Dynamic programming for optimal changepoint detection
+
+The goal of this homework is to explore dynamic programming algorithms
+for optimal changepoint detection, and compare to the binary
+segmentation algorithm.
+
+1. programmatically download the following file, which contains
+   raw/noisy data signals for several different sequenceID
+   numbers. What is the min/max number of rows (data points) per
+   sequenceID?
+   - https://raw.githubusercontent.com/tdhock/LOPART-paper/master/data-for-LOPART-signals.csv.gz
+
+2. Run jointseg::Fpsn which is a fast log-linear dynamic programming
+   (DP) algorithm on sequenceID "20167.22". Also run
+   binsegRcpp::binseg_normal for comparison. Use a max of 20 segments
+   for both algorithms. Plot y=loss as a function of x=segments using
+   different colors in a single geom_line for different algorithms
+   (e.g., binseg=red, DP=black). Does DP have a lower loss as
+   expected?
+
+3. For a single model size (number of segments/changepoints), plot the
+   data (geom_point), segment means (geom_segment), and changepoints
+   (geom_vline), with different algorithms in different panels from
+   top to bottom (facet_grid). Choose a model size that shows a clear
+   difference between binseg/DP. In what parts of the data does the DP
+   fit better than binseg? (closer to the data / detecting obvious
+   changepoints) Hint: you may need to zoom in to show details around
+   the changepoints using xlim(start.pos, end.pos)
+
+EXTRA CREDIT 20 points. changepoint::cpt.mean(data_vector,
+method="SegNeigh", penalty="Manual", Q=max.segs) is an implementation
+of the slow quadratic time dynamic programming algorithm. Show that it
+is empirically slower than jointseg::Fpsn, by doing microbenchmark
+timings on data sets of different sizes N (for a fixed max number of
+segments, say 20). Plot y=computation time in seconds versus x=data
+size N, with different algorithms in different colors (e.g.,
+Fpsn=black, SegNeigh=green), and with log-log axes/scales. Does the
+quadratic algorithm have a larger slope as expected?
+
+** CS599 Graduate students only
+
+The goal is to code the dynamic programming algorithm from scratch in
+an R function DYNPROG, using the pseudo-code in the article as
+reference. 
+
+- Your function should input a vector of numeric data, and a maximum
+  number of segments parameter (positive integer). It should begin by
+  initializing matrix cost_mat (a dynamic programming optimal cost
+  matrix), with nrow = max segments, ncol = number of data points.
+- Use the square loss / mean squared error as the cost function to
+  minimize with dynamic programming. Begin by filling in the first row
+  with the optimal cost values for the models with one segment (you
+  can do this efficiently using the cumsum function).
+- Next, compute each entry of the second row, cost_mat[2,j] which is
+  the optimal cost in 2 segments up to data point j. Then do the third
+  row, cost_mat[3,j], etc. Each entry should be computed by
+  considering all possible last changepoints. 
+- At the end of dynamic programming you should have filled in (almost)
+  all of the entries of the matrix, which you should return as
+  output. To check your work you can compare your cost matrix with
+  the "allCost" component of the list returned by jointseg::Fpsn. 
+- Run your algo and jointseg::Fpsn on one of the real data sets we saw
+  in class. Print rbind(Fpsn.fit$allCost[,N], your_cost[,N]) to
+  compare the last column of the cost matrices, which is the optimal
+  cost up to N data points for each model size. Are the values equal
+  as expected?
+
+EXTRA CREDIT 20 points. Compute and return optimal changepoints in
+addition to optimal cost values. Initialize change_mat (a matrix of
+optimal last changepoints). During each iteration after finding the
+last changepoint with min cost, you should save that changepoint in
+the corresponding entry of change_mat. At the end of the algorithm,
+for each model size i you can compute the best sequence of
+changepoints by starting at change_mat[i,N] and working backwards.

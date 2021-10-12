@@ -131,4 +131,6 @@ for(data.t in 2:N.data){
   log.alpha.mat[data.t,] <- elnproduct(log.alpha.vec, emission.prob.vec)
 }
 
+log.beta.mat <- matrix(NA, N.data, n.states)
+
 ```

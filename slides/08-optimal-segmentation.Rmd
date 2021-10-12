@@ -1,7 +1,11 @@
 ---
 title: "Optimal segmentation"
 author: "Toby Dylan Hocking"
-output: beamer_presentation
+
+output:
+    beamer_presentation:
+        includes:
+            in_header: 08-optimal-segmentation-colors.tex
 ---
 
 ```{r opts, echo=FALSE}
@@ -9,6 +13,23 @@ knitr::opts_chunk$set(
   echo=FALSE, results=FALSE,
   fig.width=10,
   fig.height=6)
+```
+
+```{r colors}
+type.colors <- c(
+  last="deepskyblue",
+  prev="red",
+  total="black")
+type.colors.mat <- col2rgb(type.colors)/255
+type.colors.list <- apply(type.colors.mat, 1, identity, simplify=FALSE)
+type.colors.hex <- do.call(rgb, type.colors.list)
+type.colors.latex <- sprintf(
+  "\\definecolor{%s}{HTML}{%s}",
+  names(type.colors),
+  sub("#", "", type.colors.hex))
+##\definecolor{Mycolor2}{HTML}{00F9DE} https://www.overleaf.com/learn/latex/Using_colours_in_LaTeX
+cat(type.colors.latex, file="08-optimal-segmentation-colors.tex", sep="\n")
+## https://tex.stackexchange.com/questions/171711/how-to-include-latex-package-in-r-markdown
 ```
 
 # Background: detecting abrupt changes is important 
@@ -536,7 +557,10 @@ showChoice <- function(up.to, n.segs, choice){
   some.tiles[(segments==n.segs & data.i>up.to) | segments>n.segs, loss := NA]
   cat(sprintf("
 $$
-\\mathcal L_{%d,t}= \\min_{t'<t} \\mathcal L_{%d,t'} + c_{(t', t]}
+\\mathcal L_{%d,t}= \\min_{t'<t}
+{ \\color{prev} \\mathcal L_{%d,t'} }
+ +
+{ \\color{last} c_{(t', t]} }
 $$
 ", n.segs, n.segs-1))
   loss.choices <- loss.list[[paste(n.segs, up.to)]]
@@ -555,12 +579,9 @@ $$
     "_loss")
   chosen.loss.tall <- loss.tall[prev.end==choice]
   loss.min <- loss.tall[type=="total"][which.min(value)]
-  ## type.colors <- c(
-  ##   last=model.color,
-  ##   prev="red",
-  ##   total="black")
   gg <- ggplot()+
     theme.big+
+    scale_color_manual(values=type.colors)+
     scale_x_continuous(
       "Position/index in data sequence")+
     scale_y_continuous(
@@ -613,24 +634,6 @@ $$
       hjust=0,
       vjust=0,
       data=data.table(chosen.loss, type="total", panel="data"))+
-    ## geom_text(aes(
-    ##   prev.end+0.5,
-    ##   value,
-    ##   color=type,
-    ##   label=sprintf("$\\mathcal L_{%d,%d}=%.2f$", n.segs-1, prev.end, value)),
-    ##   hjust=0,
-    ##   vjust=1.3,
-    ##   size=text.size,
-    ##   data=data.table(panel="loss", chosen.loss.tall))+
-    ## geom_text(aes(
-    ##   -Inf,
-    ##   value,
-    ##   color=type,
-    ##   label=sprintf("$\\mathcal L_{%d,%d}=%.2f$", n.segs, up.to, value)),
-    ##   hjust=0,
-    ##   vjust=1,
-    ##   size=text.size,
-    ##   data=data.table(panel="loss", loss.min))+
     geom_label(aes(
       prev.end+0.5,
       value,
@@ -638,7 +641,6 @@ $$
       label=sprintf(
         "$t^*=%d$",
         prev.end)),
-      ##vjust=1, hjust=0.5,
       vjust=0.5, hjust=1,
       label.size=0,
       alpha=0.5,
@@ -651,7 +653,6 @@ $$
       label=sprintf(
         "$\\mathcal L_{%d,%d}=%.2f$",
         n.segs, up.to, value)),
-      ##vjust=2, hjust=0.5,
       vjust=0.5, hjust=0,
       label.size=0,
       alpha=0.5,
@@ -662,11 +663,6 @@ $$
       value,
       color=type),
       data=data.table(panel="loss", loss.min))+
-    ## geom_hline(aes(
-    ##   yintercept=value,
-    ##   color=type),
-    ##   data=data.table(panel="loss", loss.min))+
-    ##geom_blank(aes(x,y), data=data.table(panel="loss", x=0, y=-1))+
     facet_grid(panel ~ ., scales="free")
   gg
 }
@@ -816,19 +812,25 @@ showChoice(234, 2, 150)
 # Computational complexity analysis
 
 ```{=latex}
-\begin{tabular}{cccc}
-segments & grid search & dynamic programming & binary segmentation \\
+\begin{tabular}{ccccc}
+changes & naive & DP(classic) & DP(pruned) & BinSeg \\
 \hline
-1 & $O(n)$ & $O(n)$ & $O(n)$ \\
-2 & $O(n^2)$ & $O(n^2)$ & $O(\log n)$--$O(n)$\\
-3 & $O(n^3)$ & $O(n^2)$ & $O(\log n)$--$O(n)$\\
-4 & $O(n^4)$ & $O(n^2)$ & $O(\log n)$--$O(n)$\\
+1 & $O(n)$   & $O(n)$   & $O(n\log n)$--$O(n^2)$ & $O(n)$ \\
+2 & $O(n^2)$ & $O(n^2)$ & $O(n\log n)$--$O(n^2)$ & $O(\log n)$--$O(n)$\\
+3 & $O(n^3)$ & $O(n^2)$ & $O(n\log n)$--$O(n^2)$ & $O(\log n)$--$O(n)$\\
+4 & $O(n^4)$ & $O(n^2)$ & $O(n\log n)$--$O(n^2)$ & $O(\log n)$--$O(n)$\\
 $\vdots$ &     $\vdots$ &     $\vdots$  & $\vdots$ 
 \end{tabular}
 ```
 
-For example with $n = `r N.data`$ we have $\log n = `r log(N.data)`$,
+For example we have $\log n = `r log(N.data)`$, $n = `r N.data`$,
+$n \log n = `r N.data*log(N.data)`$,
 $n^2 = `r N.data^2`$ and $n^3 = `r N.data^3`$.
+
+Dynamic programming with either functional or inequality pruning leads
+to asymptotic speedups, see Maidstone R, Hocking TD, Rigaill G,
+Fearnhead P. On optimal multiple changepoint algorithms for large
+data. Statistics and Computing (2016).
 
 ---
 

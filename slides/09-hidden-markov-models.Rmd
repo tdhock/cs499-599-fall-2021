@@ -137,8 +137,27 @@ max(abs(diff.alpha.mat))
 log.beta.mat <- matrix(NA, N.data, n.states)
 log.beta.mat[N.data, ] <- 0
 for(data.t in seq(N.data-1, 1)){
+  log.beta.vec <- rep(-Inf, n.states)
   for(state.j in 1:n.states){
+    emission.prob <- dnorm(y.vec[data.t+1], mean.vec, sd.param)
+    inside.product <- elnproduct(emission.prob, log.beta.mat[data.t+1,])
+    outside.product <- elnproduct(log(A.mat[,state.j]), inside.product)
+    log.beta.vec <- elnsum(log.beta.vec, outside.product)
   }
+  log.beta.mat[data.t,] <- log.beta.vec
 }
+
+log.gamma.mat <- matrix(NA, N.data, n.states)
+normalizer <- rep(-Inf, N.data)
+for(state.i in 1:n.states){
+  log.gamma.mat[,state.i] <- elnproduct(
+    log.alpha.mat[,state.i],log.beta.mat[,state.i])
+  normalizer <- elnsum(normalizer, log.gamma.mat[,state.i])
+}
+for(state.i in 1:n.states){
+  log.gamma.mat[,state.i] <- elnproduct(
+    log.gamma.mat[,state.i], -normalizer)
+}
+rowSums(exp(log.gamma.mat))
 
 ```

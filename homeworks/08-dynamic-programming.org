@@ -37,17 +37,6 @@ size N, with different algorithms in different colors (e.g.,
 Fpsn=black, SegNeigh=green), and with log-log axes/scales. Does the
 quadratic algorithm have a larger slope as expected?
 
-EXTRA CREDIT 20 points. [[file:Maidstone_pruning_paper.pdf]] explains two
-pruning techniques that can be used to decrease the number of
-changepoints considered by the dynamic programming, thus decreasing
-computation time while maintaining optimality. Implement the
-inequality pruning technique, and study its properties.
-- For each L_{s,t} loss value, you need to consider t-1 changepoints
-  without pruning. How many candidate changepoints are considered with
-  inequality pruning? Does this result in a substantial speedup?
-- Does it compute the same changepoints and optimal cost as the method
-  with no pruning?
-
 ** CS599 Graduate students only
 
 The goal is to code the dynamic programming algorithm from scratch in
@@ -83,3 +72,15 @@ last changepoint with min cost, you should save that changepoint in
 the corresponding entry of change_mat. At the end of the algorithm,
 for each model size i you can compute the best sequence of
 changepoints by starting at change_mat[i,N] and working backwards.
+
+EXTRA CREDIT 20 points. [[file:Maidstone_pruning_paper.pdf]] explains two
+pruning techniques that can be used to decrease the number of
+changepoints considered by the dynamic programming, thus decreasing
+computation time while maintaining optimality. Implement the
+inequality pruning technique, and study its properties.
+- For each L_{s,t} loss value, you need to consider t-1 changepoints
+  without pruning. How many candidate changepoints are considered with
+  inequality pruning? Does this result in a substantial speedup?
+- Does it compute the same changepoints and optimal cost as the method
+  with no pruning?
+

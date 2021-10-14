@@ -11,7 +11,9 @@ segmentation algorithm.
    - https://raw.githubusercontent.com/tdhock/LOPART-paper/master/data-for-LOPART-signals.csv.gz
 
 2. Run jointseg::Fpsn which is a fast log-linear dynamic programming
-   (DP) algorithm on sequenceID "20167.22". Also run
+   (DP) algorithm on sequenceID "20167.22". It returns a list with
+   many elements, and the relevant entries for our homework are J.est
+   (loss values) and t.est (changepoints). Also run
    binsegRcpp::binseg_normal for comparison. Use a max of 20 segments
    for both algorithms. Plot y=loss as a function of x=segments using
    different colors in a single geom_line for different algorithms

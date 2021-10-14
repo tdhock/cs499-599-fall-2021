@@ -1,7 +1,4 @@
-ls()
 data(neuroblastoma, package="neuroblastoma")
-ls()
-
 library(data.table)
 (nb.dt <- data.table(neuroblastoma$profiles))
 (data.dt <- nb.dt[profile.id=="1" & chromosome=="1"])

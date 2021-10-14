@@ -96,9 +96,14 @@ pi.vec <- rand.vec/sum(rand.vec)
 y.vec <- one.dt[["logratio"]]
 N.data <- length(y.vec)
 alpha.mat <- matrix(NA, N.data, n.states)
-alpha.mat[1,] <- pi.vec * dnorm(y.vec[1], mean.vec, sd.param)
+log.emission.mat <- dnorm(
+  matrix(y.vec, N.data, n.states, byrow=FALSE),
+  matrix(mean.vec, N.data, n.states, byrow=TRUE),
+  sd.param,
+  log=TRUE)
+alpha.mat[1,] <- pi.vec * exp(log.emission.mat[1,])
 for(data.t in 2:N.data){
-  alpha.mat[data.t,] <- dnorm(y.vec[data.t], mean.vec, sd.param)*
+  alpha.mat[data.t,] <- exp(log.emission.mat[data.t,])*
     colSums(A.mat*matrix(alpha.mat[data.t-1,], n.states, n.states))
 }
 ##http://bozeman.genome.washington.edu/compbio/mbt599_2006/hmm_scaling_revised.pdf
@@ -117,8 +122,8 @@ elnproduct <- function(elnx, elny){
 }
 log.alpha.mat <- matrix(NA, N.data, n.states)
 log.alpha.mat[1,] <- elnproduct(
-  log(pi.vec), 
-  dnorm(y.vec[1], mean.vec, sd.param, log=TRUE))
+  log(pi.vec),
+  log.emission.mat[1,])
 for(data.t in 2:N.data){
   log.alpha.vec <- rep(-Inf, n.states)
   for(state.i in 1:n.states){
@@ -127,19 +132,19 @@ for(data.t in 2:N.data){
       log(A.mat[state.i,]))
     log.alpha.vec <- elnsum(log.alpha.vec, prod.vec)
   }
-  emission.prob.vec <- dnorm(y.vec[data.t], mean.vec, sd.param, log=TRUE)
+  emission.prob.vec <- log.emission.mat[data.t,]
   log.alpha.mat[data.t,] <- elnproduct(log.alpha.vec, emission.prob.vec)
 }
 diff.alpha.mat <- log.alpha.mat-log(alpha.mat)
 head(diff.alpha.mat)
-max(abs(diff.alpha.mat))
+max(abs(diff.alpha.mat))#should be zero
 
 log.beta.mat <- matrix(NA, N.data, n.states)
 log.beta.mat[N.data, ] <- 0
 for(data.t in seq(N.data-1, 1)){
   log.beta.vec <- rep(-Inf, n.states)
   for(state.j in 1:n.states){
-    emission.prob <- dnorm(y.vec[data.t+1], mean.vec, sd.param)
+    emission.prob <- exp(log.emission.mat[data.t+1,])
     inside.product <- elnproduct(emission.prob, log.beta.mat[data.t+1,])
     outside.product <- elnproduct(log(A.mat[,state.j]), inside.product)
     log.beta.vec <- elnsum(log.beta.vec, outside.product)
@@ -158,6 +163,16 @@ for(state.i in 1:n.states){
   log.gamma.mat[,state.i] <- elnproduct(
     log.gamma.mat[,state.i], -normalizer)
 }
-rowSums(exp(log.gamma.mat))
+rowSums(exp(log.gamma.mat))#should be one
 
+## array-based?
+arr.dim <- c(dim(A.mat), N.data-1)
+Aij.array <- array(A.mat, arr.dim)
+str(Aij.array)
+Aij.array[,,1:2]
+A.mat
+inner.prod <- elnproduct(log.emission.mat[-1,], log.beta.mat[-1,])
+inner.arr <- array(rep(t(inner.prod), each=3), arr.dim)
+inner.arr[,,1:2]
+inner.prod[1:2,]
 ```

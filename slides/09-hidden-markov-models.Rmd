@@ -123,21 +123,25 @@ for(iteration in 1:max.it){
     sd.param,
     log=TRUE)
   ##alpha/forward.
-  log.alpha.mat <- matrix(NA, N.data, n.states)
-  log.alpha.mat[1,] <- elnproduct(
-    log(pi.vec),
-    log.emission.mat[1,])
-  for(data.t in 2:N.data){
-    log.alpha.vec <- rep(-Inf, n.states)
-    for(state.i in 1:n.states){
-      prod.vec <- elnproduct(
-        log.alpha.mat[data.t-1,state.i],
-        log(A.mat[state.i,]))
-      log.alpha.vec <- elnsum(log.alpha.vec, prod.vec)
+  microbenchmark::microbenchmark(R={
+    log.alpha.mat <- matrix(NA, N.data, n.states)
+    log.alpha.mat[1,] <- elnproduct(
+      log(pi.vec),
+      log.emission.mat[1,])
+    for(data.t in 2:N.data){
+      log.alpha.vec <- rep(-Inf, n.states)
+      for(state.i in 1:n.states){
+        prod.vec <- elnproduct(
+          log.alpha.mat[data.t-1,state.i],
+          log(A.mat[state.i,]))
+        log.alpha.vec <- elnsum(log.alpha.vec, prod.vec)
+      }
+      emission.prob.vec <- log.emission.mat[data.t,]
+      log.alpha.mat[data.t,] <- elnproduct(log.alpha.vec, emission.prob.vec)
     }
-    emission.prob.vec <- log.emission.mat[data.t,]
-    log.alpha.mat[data.t,] <- elnproduct(log.alpha.vec, emission.prob.vec)
-  }
+  }, "C++"={
+    plotHMM::forward_interface(log.emission.mat, pi.vec, A.mat)
+  }, times=5)
   logsumexp <- function(exponents.vec){
     m <- max(exponents.vec)
     m + log(sum(exp(exponents.vec-m)))
@@ -232,6 +236,7 @@ for(iteration in 1:max.it){
 prob.dt <- do.call(rbind, prob.dt.list)
 mean.dt <- do.call(rbind, mean.dt.list)
 lik.dt <- do.call(rbind, lik.dt.list)
+expand <- diff(range(y.vec))/10
 y.grid <- sort(c(
   mean.dt$mean,
   seq(min(y.vec)-expand, max(y.vec)+expand, l=201)))
@@ -247,11 +252,19 @@ ggplot()+
     data=lik.dt)
 
 
+## comparing sd with binseg.
+segs <- coef(binsegRcpp::binseg_normal(y.vec, 4), 4L)
+setkey(segs, start, end)
+one.dt[, i := .I]
+one.dt[, data.i := .I]
+setkey(one.dt, i, data.i)
+over.dt <- foverlaps(one.dt, segs)
+over.dt[, resid := logratio-mean]
+over.dt[, sqrt(mean(resid^2))]
 ## TODO draw transition matrix.
-it <- 1
+it <- 41
 it.mean <- mean.dt[iteration==it]
 it.dens <- dens.dt[iteration==it]
-expand <- diff(range(y.vec))/10
 it.prob <- prob.dt[iteration==it]
 dput(RColorBrewer::brewer.pal(3, "Dark2"))
 state.values <- c("#1B9E77", "#D95F02", "#7570B3")
@@ -281,15 +294,6 @@ gg <- ggplot()+
   facet_grid(ypanel ~ xpanel, scales="free")
 gg
 
-## comparing sd with binseg.
-segs <- coef(binsegRcpp::binseg_normal(y.vec, 4), 4L)
-setkey(segs, start, end)
-one.dt[, i := .I]
-one.dt[, data.i := .I]
-setkey(one.dt, i, data.i)
-over.dt <- foverlaps(one.dt, segs)
-over.dt[, resid := logratio-mean]
-over.dt[, sqrt(mean(resid^2))]
 ```
 
 ```{r}

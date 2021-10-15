@@ -809,7 +809,7 @@ showChoice(234, 2, 150)
 
 ---
 
-# Computational complexity analysis
+# Time complexity analysis
 
 ```{=latex}
 \begin{tabular}{ccccc}
@@ -831,6 +831,16 @@ Dynamic programming with either functional or inequality pruning leads
 to asymptotic speedups, see Maidstone R, Hocking TD, Rigaill G,
 Fearnhead P. On optimal multiple changepoint algorithms for large
 data. Statistics and Computing (2016).
+
+---
+
+# Space complexity analysis
+
+For computing best model in $S$ segments and $n$ data,
+
+- Dynamic programming: $O(n S)$ loss $\mathcal L_{s,t}$ values to
+  store.
+- Binary segmentation: $O(S)$ split candidates to store.
 
 ---
 

@@ -88,36 +88,14 @@ Let $K$ be the number of hidden states. For every state we have
 n.states <- 3
 A.mat <- matrix(1/n.states, n.states, n.states)
 mean.vec <- c(-1, 0, 1)*0.1
+y.vec <- one.dt[["logratio"]]
+n.q <- n.states+2
+mean.vec <- quantile(y.vec, seq(0, 1, l=n.q)[-c(1,n.q)])
+##set.seed(1)
+##mean.vec <- rnorm(n.states)
 sd.param <- 1
 pi.vec <- rep(1/n.states, n.states)
-y.vec <- one.dt[["logratio"]]
 N.data <- length(y.vec)
-alpha.mat <- matrix(NA, N.data, n.states)
-log.emission.mat <- dnorm(
-  matrix(y.vec, N.data, n.states, byrow=FALSE),
-  matrix(mean.vec, N.data, n.states, byrow=TRUE),
-  sd.param,
-  log=TRUE)
-alpha.mat[1,] <- pi.vec * exp(log.emission.mat[1,])
-for(data.t in 2:N.data){
-  alpha.mat[data.t,] <- exp(log.emission.mat[data.t,])*
-    colSums(A.mat*matrix(alpha.mat[data.t-1,], n.states, n.states))
-}
-mlapp.alpha.mat <- matrix(NA, N.data, n.states)
-prob.vec <- pi.vec * exp(log.emission.mat[1,])
-Z <- sum(prob.vec)
-mlapp.alpha.mat[1,] <- prob.vec/Z
-Z.vec <- rep(NA, N.data)
-Z.vec[1] <- Z
-for(data.t in 2:N.data){
-  emission.vec <- exp(log.emission.mat[data.t,])
-  prob.vec <- emission.vec * t(A.mat) %*% mlapp.alpha.mat[data.t-1,]
-  Z <- sum(prob.vec)
-  mlapp.alpha.mat[data.t,] <- prob.vec/Z
-  Z.vec[data.t] <- Z
-}
-## MLAPP equation (17.49) log(x_{1:T}|theta) = sum_{t=1}^T log(Z_t)
-sum(log(Z.vec))
 ##http://bozeman.genome.washington.edu/compbio/mbt599_2006/hmm_scaling_revised.pdf
 elnsum <- function(elnx, elny){
   fcase(
@@ -132,113 +110,186 @@ elnproduct <- function(elnx, elny){
     -Inf,
     elnx+elny)
 }
-logsumexp <- function(exponents.vec){
-  m <- max(exponents.vec)
-  m + log(sum(exp(exponents.vec-m)))
-}
-log.alpha.mat <- matrix(NA, N.data, n.states)
-log.alpha.mat[1,] <- elnproduct(
-  log(pi.vec),
-  log.emission.mat[1,])
-for(data.t in 2:N.data){
-  log.alpha.vec <- rep(-Inf, n.states)
-  for(state.i in 1:n.states){
-    prod.vec <- elnproduct(
-      log.alpha.mat[data.t-1,state.i],
-      log(A.mat[state.i,]))
-    log.alpha.vec <- elnsum(log.alpha.vec, prod.vec)
+
+prob.dt.list <- list()
+lik.dt.list <- list()
+trans.dt.list <- list()
+mean.dt.list <- list()
+max.it <- 50
+for(iteration in 1:max.it){
+  log.emission.mat <- dnorm(
+    matrix(y.vec, N.data, n.states, byrow=FALSE),
+    matrix(mean.vec, N.data, n.states, byrow=TRUE),
+    sd.param,
+    log=TRUE)
+  ##alpha/forward.
+  log.alpha.mat <- matrix(NA, N.data, n.states)
+  log.alpha.mat[1,] <- elnproduct(
+    log(pi.vec),
+    log.emission.mat[1,])
+  for(data.t in 2:N.data){
+    log.alpha.vec <- rep(-Inf, n.states)
+    for(state.i in 1:n.states){
+      prod.vec <- elnproduct(
+        log.alpha.mat[data.t-1,state.i],
+        log(A.mat[state.i,]))
+      log.alpha.vec <- elnsum(log.alpha.vec, prod.vec)
+    }
+    emission.prob.vec <- log.emission.mat[data.t,]
+    log.alpha.mat[data.t,] <- elnproduct(log.alpha.vec, emission.prob.vec)
   }
-  emission.prob.vec <- log.emission.mat[data.t,]
-  log.alpha.mat[data.t,] <- elnproduct(log.alpha.vec, emission.prob.vec)
-}
-diff.alpha.mat <- log.alpha.mat-log(alpha.mat)
-head(diff.alpha.mat)
-max(abs(diff.alpha.mat))#should be zero
-log.beta.mat <- matrix(NA, N.data, n.states)
-log.beta.mat[N.data, ] <- 0
-for(data.t in seq(N.data-1, 1)){
-  log.beta.vec <- rep(-Inf, n.states)
-  for(state.j in 1:n.states){
-    log.emission.prob <- log.emission.mat[data.t+1,]
-    inside.product <- elnproduct(log.emission.prob, log.beta.mat[data.t+1,])
-    outside.product <- elnproduct(log(A.mat[,state.j]), inside.product)
-    log.beta.vec <- elnsum(log.beta.vec, outside.product)
+  logsumexp <- function(exponents.vec){
+    m <- max(exponents.vec)
+    m + log(sum(exp(exponents.vec-m)))
   }
-  log.beta.mat[data.t,] <- log.beta.vec
-}
-log.gamma.mat <- matrix(NA, N.data, n.states)
-normalizer <- rep(-Inf, N.data)
-for(state.i in 1:n.states){
-  log.gamma.mat[,state.i] <- elnproduct(
-    log.alpha.mat[,state.i],log.beta.mat[,state.i])
-  normalizer <- elnsum(normalizer, log.gamma.mat[,state.i])
-}
-for(state.i in 1:n.states){
-  log.gamma.mat[,state.i] <- elnproduct(
-    log.gamma.mat[,state.i], -normalizer)
-}
-prob.mat <- exp(log.gamma.mat)
-rowSums(prob.mat)#should be one
-## array-based?
-arr.dim <- c(dim(A.mat), N.data-1)
-Aij.array <- array(A.mat, arr.dim)
-str(Aij.array)
-Aij.array[,,1:2]
-A.mat
-inner.prod <- elnproduct(log.emission.mat[-1,], log.beta.mat[-1,])
-inner.arr <- array(rep(t(inner.prod), each=n.states), arr.dim)
-inner.arr[,,1:2]
-inner.prod[1:2,]
-second.arr <- elnproduct(Aij.array, inner.arr)
-second.arr[,,1:2]
-log.alpha.arr <- array(
-  apply(log.alpha.mat[-N.data,], 1, rep, n.states),
-  arr.dim)
-log.alpha.arr[,,1:2]
-log.alpha.mat[1:2,]
-log.xi.arr <- elnproduct(log.alpha.arr, second.arr)
-normalizer <- rep(-Inf, N.data-1)
-for(state.i in 1:n.states){
-  for(state.j in 1:n.states){
-    normalizer <- elnsum(normalizer, log.xi.arr[state.i, state.j,])
-  }
-}
-log.xi.norm <- array(NA, arr.dim)
-for(state.i in 1:n.states){
-  for(state.j in 1:n.states){
-    log.xi.norm[state.i, state.j, ] <- elnproduct(
-      log.xi.arr[state.i, state.j, ], -normalizer)
-  }
-}
-xi.arr <- array(NA, c(n.states, n.states, N.data-1))
-for(data.t in seq(1, N.data-1)){
-  normalizer <- -Inf
-  for(state.i in 1:n.states){
-    for(state.j in 1:n.states){
-      first.product <- elnproduct(
-        log.emission.mat[data.t+1, state.j],
-        log.beta.mat[data.t+1, state.j])
-      second.product <- elnproduct(
-        first.product,
-        log(A.mat[state.i, state.j]))
-      value <- elnproduct(
-        second.product,
-        log.alpha.mat[data.t, state.i])
-      normalizer <- elnsum(normalizer, value)
-      xi.arr[state.i, state.j, data.t] <- value
+  print(log.lik <- logsumexp(log.alpha.mat[N.data,]))
+  ##beta/backward.
+  log.beta.mat <- matrix(NA, N.data, n.states)
+  log.beta.mat[N.data, ] <- 0
+  for(data.t in seq(N.data-1, 1)){
+    for(state.i in 1:n.states){
+      log.beta <- -Inf
+      for(state.j in 1:n.states){
+        le <- log.emission.mat[data.t+1,state.j]
+        lb <- log.beta.mat[data.t+1,state.j]
+        la <- log(A.mat[state.i,state.j])
+        inside.product <- elnproduct(le, lb)
+        outside.product <- elnproduct(la, inside.product)
+        log.beta <- elnsum(log.beta, outside.product)
+      }
+      log.beta.mat[data.t,state.i] <- log.beta
     }
   }
-  xi.arr[,, data.t] <- elnproduct(xi.arr[,, data.t], -normalizer)
+  log.gamma.mat <- matrix(NA, N.data, n.states)
+  normalizer <- rep(-Inf, N.data)
+  for(state.i in 1:n.states){
+    log.gamma.mat[,state.i] <- elnproduct(
+      log.alpha.mat[,state.i],log.beta.mat[,state.i])
+    normalizer <- elnsum(normalizer, log.gamma.mat[,state.i])
+  }
+  for(state.i in 1:n.states){
+    log.gamma.mat[,state.i] <- elnproduct(
+      log.gamma.mat[,state.i], -normalizer)
+  }
+  prob.mat <- exp(log.gamma.mat)
+  xi.arr <- array(NA, c(n.states, n.states, N.data-1))
+  for(data.t in seq(1, N.data-1)){
+    normalizer <- -Inf
+    for(state.i in 1:n.states){
+      for(state.j in 1:n.states){
+        first.product <- elnproduct(
+          log.emission.mat[data.t+1, state.j],
+          log.beta.mat[data.t+1, state.j])
+        second.product <- elnproduct(
+          first.product,
+          log(A.mat[state.i, state.j]))
+        value <- elnproduct(
+          second.product,
+          log.alpha.mat[data.t, state.i])
+        normalizer <- elnsum(normalizer, value)
+        xi.arr[state.i, state.j, data.t] <- value
+      }
+    }
+    xi.arr[,, data.t] <- elnproduct(xi.arr[,, data.t], -normalizer)
+  }
+  ## update rules.
+  (pi.vec <- prob.mat[1,])
+  (mean.vec <- colSums(y.vec*prob.mat)/colSums(prob.mat))
+  resid.mat <- y.vec-matrix(mean.vec, N.data, n.states, byrow=TRUE)
+  var.est <- sum(prob.mat * resid.mat^2) / sum(prob.mat)
+  (sd.param <- sqrt(var.est))
+  ##apply(log.gamma.mat, 1, which.max)
+  for(state.i in 1:n.states){
+    for(state.j in 1:n.states){
+      numerator <- -Inf
+      denominator <- -Inf
+      for(data.t in seq(1, N.data-1)){
+        numerator <- elnsum(numerator, xi.arr[state.i, state.j, data.t])
+        denominator <- elnsum(denominator, log.gamma.mat[data.t, state.i])
+      }
+      A.mat[state.i, state.j] <- exp(elnproduct(numerator, -denominator))
+    }
+  }
+  trans.dt.list[[iteration]] <- data.table(
+    iteration,
+    prob=as.numeric(A.mat),
+    from.state=as.integer(row(A.mat)),
+    to.state=as.integer(col(A.mat)))
+  lik.dt.list[[iteration]] <- data.table(
+    iteration,
+    log.lik)
+  mean.dt.list[[iteration]] <- data.table(
+    iteration,
+    state=factor(seq_along(mean.vec)),
+    sd=sd.param,
+    mean=mean.vec)
+  prob.dt.list[[iteration]] <- data.table(
+    iteration,
+    prob=as.numeric(prob.mat),
+    data.i=as.integer(row(prob.mat)),
+    state=factor(as.integer(col(prob.mat))))
 }
-
-## update rules.
-(pi.vec <- prob.mat[1,])
-(mean.vec <- colSums(y.vec*prob.mat)/colSums(prob.mat))
-resid.mat <- y.vec-matrix(mean.vec, N.data, n.states, byrow=TRUE)
-sd.param <- sum(prob.mat * resid.mat^2) / sum(prob.mat)
-apply(log.gamma.mat, 1, which.max)
+prob.dt <- do.call(rbind, prob.dt.list)
+mean.dt <- do.call(rbind, mean.dt.list)
+lik.dt <- do.call(rbind, lik.dt.list)
+y.grid <- sort(c(
+  mean.dt$mean,
+  seq(min(y.vec)-expand, max(y.vec)+expand, l=201)))
+dens.dt <- mean.dt[, .(
+  y=y.grid,
+  density=dnorm(y.grid, mean, sd)
+), by=.(iteration, state)]
 ## https://web.stanford.edu/~jurafsky/slp3/A.pdf
 
+ggplot()+
+  geom_point(aes(
+    iteration, log.lik),
+    data=lik.dt)
+
+
+## TODO draw transition matrix.
+it <- 1
+it.mean <- mean.dt[iteration==it]
+it.dens <- dens.dt[iteration==it]
+expand <- diff(range(y.vec))/10
+it.prob <- prob.dt[iteration==it]
+dput(RColorBrewer::brewer.pal(3, "Dark2"))
+state.values <- c("#1B9E77", "#D95F02", "#7570B3")
+gg <- ggplot()+
+  xlab("")+
+  ylab("")+
+  geom_text(aes(
+    0, mean, color=state, label=paste(state, " ")),
+    hjust=1,
+    data=data.table(xpanel="dens", ypanel="data values", it.mean))+
+  geom_blank(aes(
+    density, y),
+    data=data.table(xpanel="dens", ypanel="data values", dens.dt))+
+  geom_path(aes(
+    density, y, color=state),
+    data=data.table(xpanel="dens", ypanel="data values", it.dens))+
+  scale_color_manual(values=state.values)+
+  geom_point(aes(
+    data.i, logratio),
+    data=data.table(xpanel="data.i", ypanel="data values", one.dt))+
+  geom_blank(aes(
+    data.i, prob),
+    data=data.table(xpanel="data.i", ypanel="prob", prob.dt))+
+  geom_line(aes(
+    data.i, prob, color=state),
+    data=data.table(xpanel="data.i", ypanel="prob", it.prob))+
+  facet_grid(ypanel ~ xpanel, scales="free")
+gg
+
+## comparing sd with binseg.
+segs <- coef(binsegRcpp::binseg_normal(y.vec, 4), 4L)
+setkey(segs, start, end)
+one.dt[, i := .I]
+one.dt[, data.i := .I]
+setkey(one.dt, i, data.i)
+over.dt <- foverlaps(one.dt, segs)
+over.dt[, resid := logratio-mean]
+over.dt[, sqrt(mean(resid^2))]
 ```
 
 ```{r}
@@ -271,16 +322,6 @@ for(data.t in 2:N.data){
   emission.prob.vec <- log.emission.mat[data.t,]
   log.alpha.mat[data.t,] <- elnproduct(log.alpha.vec, emission.prob.vec)
 }
-alpha.mat <- matrix(NA, N.data, n.states)
-alpha.mat[1,] <- pi.vec * exp(log.emission.mat[1,])
-alpha.mat[1,] <- c(.34, .08)
-for(data.t in 2:N.data){
-  prev.mat <- matrix(alpha.mat[data.t-1,], n.states, n.states)
-  emission.vec <- exp(log.emission.mat[data.t,])
-  emat <- matrix(emission.vec, n.states, n.states, byrow=TRUE)
-  alpha.mat[data.t,] <- colSums(A.mat*prev.mat*emat)
-}
-
 log.beta.mat <- matrix(NA, N.data, n.states)
 log.beta.mat[N.data, ] <- 0
 for(data.t in seq(N.data-1, 1)){
@@ -334,4 +375,32 @@ for(data.t in seq(1, N.data-1)){
 }
 
 
+```
+
+
+```{r}
+alpha.mat[1,] <- pi.vec * exp(log.emission.mat[1,])
+for(data.t in 2:N.data){
+  alpha.mat[data.t,] <- exp(log.emission.mat[data.t,])*
+    colSums(A.mat*matrix(alpha.mat[data.t-1,], n.states, n.states))
+}
+mlapp.alpha.mat <- matrix(NA, N.data, n.states)
+prob.vec <- pi.vec * exp(log.emission.mat[1,])
+Z <- sum(prob.vec)
+mlapp.alpha.mat[1,] <- prob.vec/Z
+Z.vec <- rep(NA, N.data)
+Z.vec[1] <- Z
+for(data.t in 2:N.data){
+  emission.vec <- exp(log.emission.mat[data.t,])
+  prob.vec <- emission.vec * t(A.mat) %*% mlapp.alpha.mat[data.t-1,]
+  Z <- sum(prob.vec)
+  mlapp.alpha.mat[data.t,] <- prob.vec/Z
+  Z.vec[data.t] <- Z
+}
+## MLAPP equation (17.49) log(x_{1:T}|theta) = sum_{t=1}^T log(Z_t)
+logsumexp <- function(exponents.vec){
+  m <- max(exponents.vec)
+  m + log(sum(exp(exponents.vec-m)))
+}
+sum(log(Z.vec))
 ```

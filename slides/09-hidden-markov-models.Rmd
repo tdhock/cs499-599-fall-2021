@@ -89,28 +89,9 @@ n.states <- 3
 A.mat <- matrix(1/n.states, n.states, n.states)
 mean.vec <- c(-1, 0, 1)*0.1
 y.vec <- one.dt[["logratio"]]
-n.q <- n.states+2
-mean.vec <- quantile(y.vec, seq(0, 1, l=n.q)[-c(1,n.q)])
-##set.seed(1)
-##mean.vec <- rnorm(n.states)
 sd.param <- 1
 pi.vec <- rep(1/n.states, n.states)
 N.data <- length(y.vec)
-##http://bozeman.genome.washington.edu/compbio/mbt599_2006/hmm_scaling_revised.pdf
-elnsum <- function(elnx, elny){
-  fcase(
-    elnx == -Inf, elny,
-    elny == -Inf, elnx,
-    elny < elnx, elnx + log(1+exp(elny-elnx)),
-    elnx <= elny, elny + log(1+exp(elnx-elny)))
-}
-elnproduct <- function(elnx, elny){
-  ifelse(
-    elnx == -Inf | elny == -Inf,
-    -Inf,
-    elnx+elny)
-}
-
 prob.dt.list <- list()
 lik.dt.list <- list()
 trans.dt.list <- list()
@@ -122,98 +103,21 @@ for(iteration in 1:max.it){
     matrix(mean.vec, N.data, n.states, byrow=TRUE),
     sd.param,
     log=TRUE)
-  ##alpha/forward.
-  microbenchmark::microbenchmark(R={
-    log.alpha.mat <- matrix(NA, N.data, n.states)
-    log.alpha.mat[1,] <- elnproduct(
-      log(pi.vec),
-      log.emission.mat[1,])
-    for(data.t in 2:N.data){
-      log.alpha.vec <- rep(-Inf, n.states)
-      for(state.i in 1:n.states){
-        prod.vec <- elnproduct(
-          log.alpha.mat[data.t-1,state.i],
-          log(A.mat[state.i,]))
-        log.alpha.vec <- elnsum(log.alpha.vec, prod.vec)
-      }
-      emission.prob.vec <- log.emission.mat[data.t,]
-      log.alpha.mat[data.t,] <- elnproduct(log.alpha.vec, emission.prob.vec)
-    }
-  }, "C++"={
-    plotHMM::forward_interface(log.emission.mat, pi.vec, A.mat)
-  }, times=5)
-  logsumexp <- function(exponents.vec){
-    m <- max(exponents.vec)
-    m + log(sum(exp(exponents.vec-m)))
-  }
-  print(log.lik <- logsumexp(log.alpha.mat[N.data,]))
-  ##beta/backward.
-  log.beta.mat <- matrix(NA, N.data, n.states)
-  log.beta.mat[N.data, ] <- 0
-  for(data.t in seq(N.data-1, 1)){
-    for(state.i in 1:n.states){
-      log.beta <- -Inf
-      for(state.j in 1:n.states){
-        le <- log.emission.mat[data.t+1,state.j]
-        lb <- log.beta.mat[data.t+1,state.j]
-        la <- log(A.mat[state.i,state.j])
-        inside.product <- elnproduct(le, lb)
-        outside.product <- elnproduct(la, inside.product)
-        log.beta <- elnsum(log.beta, outside.product)
-      }
-      log.beta.mat[data.t,state.i] <- log.beta
-    }
-  }
-  log.gamma.mat <- matrix(NA, N.data, n.states)
-  normalizer <- rep(-Inf, N.data)
-  for(state.i in 1:n.states){
-    log.gamma.mat[,state.i] <- elnproduct(
-      log.alpha.mat[,state.i],log.beta.mat[,state.i])
-    normalizer <- elnsum(normalizer, log.gamma.mat[,state.i])
-  }
-  for(state.i in 1:n.states){
-    log.gamma.mat[,state.i] <- elnproduct(
-      log.gamma.mat[,state.i], -normalizer)
-  }
+  fwd.list <- plotHMM::forward_interface(log.emission.mat, A.mat, pi.vec)
+  log.alpha.mat <- fwd.list[["log_alpha"]]
+  log.beta.mat <- plotHMM::backward_interface(log.emission.mat, A.mat)
+  log.gamma.mat <- plotHMM::multiply_interface(log.alpha.mat, log.beta.mat)
   prob.mat <- exp(log.gamma.mat)
-  xi.arr <- array(NA, c(n.states, n.states, N.data-1))
-  for(data.t in seq(1, N.data-1)){
-    normalizer <- -Inf
-    for(state.i in 1:n.states){
-      for(state.j in 1:n.states){
-        first.product <- elnproduct(
-          log.emission.mat[data.t+1, state.j],
-          log.beta.mat[data.t+1, state.j])
-        second.product <- elnproduct(
-          first.product,
-          log(A.mat[state.i, state.j]))
-        value <- elnproduct(
-          second.product,
-          log.alpha.mat[data.t, state.i])
-        normalizer <- elnsum(normalizer, value)
-        xi.arr[state.i, state.j, data.t] <- value
-      }
-    }
-    xi.arr[,, data.t] <- elnproduct(xi.arr[,, data.t], -normalizer)
-  }
+  log.xi.array <- plotHMM::pairwise_interface(
+    log.emission.mat, A.mat, log.alpha.mat, log.beta.mat)
   ## update rules.
   (pi.vec <- prob.mat[1,])
   (mean.vec <- colSums(y.vec*prob.mat)/colSums(prob.mat))
   resid.mat <- y.vec-matrix(mean.vec, N.data, n.states, byrow=TRUE)
   var.est <- sum(prob.mat * resid.mat^2) / sum(prob.mat)
   (sd.param <- sqrt(var.est))
+  A.mat <- plotHMM::transition_interface(log.gamma.mat, log.xi.array)
   ##apply(log.gamma.mat, 1, which.max)
-  for(state.i in 1:n.states){
-    for(state.j in 1:n.states){
-      numerator <- -Inf
-      denominator <- -Inf
-      for(data.t in seq(1, N.data-1)){
-        numerator <- elnsum(numerator, xi.arr[state.i, state.j, data.t])
-        denominator <- elnsum(denominator, log.gamma.mat[data.t, state.i])
-      }
-      A.mat[state.i, state.j] <- exp(elnproduct(numerator, -denominator))
-    }
-  }
   trans.dt.list[[iteration]] <- data.table(
     iteration,
     prob=as.numeric(A.mat),
@@ -221,7 +125,7 @@ for(iteration in 1:max.it){
     to.state=as.integer(col(A.mat)))
   lik.dt.list[[iteration]] <- data.table(
     iteration,
-    log.lik)
+    log.lik=fwd.list[["log_lik"]])
   mean.dt.list[[iteration]] <- data.table(
     iteration,
     state=factor(seq_along(mean.vec)),
@@ -296,115 +200,3 @@ gg
 
 ```
 
-```{r}
-## for debugging https://iulg.sitehost.iu.edu/moss/hmmcalculations.pdf
-st <- function(...)structure(c(...), names=c("s","t"))
-pi.vec <- st(.85, .15)
-initial.dist <- rbind(
-  A=st(.4, .5),
-  B=st(.6, .5))
-A.mat <- rbind(
-  s=st(.3, .7),
-  t=st(.1, .9))
-seq1=strsplit("ABBA",split="")[[1]]
-N.data <- length(seq1)
-log.emission.mat <- log(initial.dist[seq1,])
-n.states <- length(pi.vec)
-log.alpha.mat <- matrix(NA, N.data, n.states)
-log.alpha.mat[1,] <- elnproduct(
-  log(pi.vec),
-  log.emission.mat[1,])
-(log.alpha.mat[1,] <- log(c(.34, .08)))
-for(data.t in 2:N.data){
-  log.alpha.vec <- rep(-Inf, n.states)
-  for(state.i in 1:n.states){
-    prod.vec <- elnproduct(
-      log.alpha.mat[data.t-1,state.i],
-      log(A.mat[state.i,]))
-    log.alpha.vec <- elnsum(log.alpha.vec, prod.vec)
-  }
-  emission.prob.vec <- log.emission.mat[data.t,]
-  log.alpha.mat[data.t,] <- elnproduct(log.alpha.vec, emission.prob.vec)
-}
-log.beta.mat <- matrix(NA, N.data, n.states)
-log.beta.mat[N.data, ] <- 0
-for(data.t in seq(N.data-1, 1)){
-  for(state.i in 1:n.states){
-    log.beta <- -Inf
-    for(state.j in 1:n.states){
-      le <- log.emission.mat[data.t+1,state.j]
-      lb <- log.beta.mat[data.t+1,state.j]
-      la <- log(A.mat[state.i,state.j])
-      print(exp(c(la, le, lb)))
-      inside.product <- elnproduct(le, lb)
-      outside.product <- elnproduct(la, inside.product)
-      log.beta <- elnsum(log.beta, outside.product)
-    }
-    log.beta.mat[data.t,state.i] <- log.beta
-  }
-}
-
-log.gamma.mat <- matrix(NA, N.data, n.states)
-normalizer <- rep(-Inf, N.data)
-for(state.i in 1:n.states){
-  log.gamma.mat[,state.i] <- elnproduct(
-    log.alpha.mat[,state.i],log.beta.mat[,state.i])
-  normalizer <- elnsum(normalizer, log.gamma.mat[,state.i])
-}
-for(state.i in 1:n.states){
-  log.gamma.mat[,state.i] <- elnproduct(
-    log.gamma.mat[,state.i], -normalizer)
-}
-prob.mat <- exp(log.gamma.mat)
-
-xi.arr <- array(NA, c(n.states, n.states, N.data-1))
-for(data.t in seq(1, N.data-1)){
-  normalizer <- -Inf
-  for(state.i in 1:n.states){
-    for(state.j in 1:n.states){
-      first.product <- elnproduct(
-        log.emission.mat[data.t+1, state.j],
-        log.beta.mat[data.t+1, state.j])
-      second.product <- elnproduct(
-        first.product,
-        log(A.mat[state.i, state.j]))
-      value <- elnproduct(
-        second.product,
-        log.alpha.mat[data.t, state.i])
-      normalizer <- elnsum(normalizer, value)
-      xi.arr[state.i, state.j, data.t] <- value
-    }
-  }
-  xi.arr[,, data.t] <- elnproduct(xi.arr[,, data.t], -normalizer)
-}
-
-
-```
-
-
-```{r}
-alpha.mat[1,] <- pi.vec * exp(log.emission.mat[1,])
-for(data.t in 2:N.data){
-  alpha.mat[data.t,] <- exp(log.emission.mat[data.t,])*
-    colSums(A.mat*matrix(alpha.mat[data.t-1,], n.states, n.states))
-}
-mlapp.alpha.mat <- matrix(NA, N.data, n.states)
-prob.vec <- pi.vec * exp(log.emission.mat[1,])
-Z <- sum(prob.vec)
-mlapp.alpha.mat[1,] <- prob.vec/Z
-Z.vec <- rep(NA, N.data)
-Z.vec[1] <- Z
-for(data.t in 2:N.data){
-  emission.vec <- exp(log.emission.mat[data.t,])
-  prob.vec <- emission.vec * t(A.mat) %*% mlapp.alpha.mat[data.t-1,]
-  Z <- sum(prob.vec)
-  mlapp.alpha.mat[data.t,] <- prob.vec/Z
-  Z.vec[data.t] <- Z
-}
-## MLAPP equation (17.49) log(x_{1:T}|theta) = sum_{t=1}^T log(Z_t)
-logsumexp <- function(exponents.vec){
-  m <- max(exponents.vec)
-  m + log(sum(exp(exponents.vec-m)))
-}
-sum(log(Z.vec))
-```

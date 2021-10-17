@@ -23,8 +23,8 @@ suppressPackageStartupMessages({
 })
 data(neuroblastoma, package="neuroblastoma")
 nb.dt <- data.table(neuroblastoma[["profiles"]])
-setkey(nb.dt, profile.id, chromosome)
-one.dt <- nb.dt[J("4", "2")]
+nb.dt[, data.i := rank(position), keyby=.(profile.id, chromosome)]
+chrom.dt <- nb.dt[J("4", "2")]
 ggplot()+
   scale_x_continuous(
     "Position/index in data sequence")+
@@ -32,7 +32,7 @@ ggplot()+
     "logratio (approximate DNA copy number)")+
   geom_point(aes(
     position, logratio),
-    data=one.dt)
+    data=chrom.dt)
 ```
 
 ---
@@ -88,7 +88,7 @@ Let $K$ be the number of hidden states. For every state we have
 n.states <- 3
 A.mat <- matrix(1/n.states, n.states, n.states)
 mean.vec <- c(-1, 0, 1)*0.1
-y.vec <- one.dt[["logratio"]]
+y.vec <- chrom.dt[["logratio"]]
 sd.param <- 1
 pi.vec <- rep(1/n.states, n.states)
 N.data <- length(y.vec)
@@ -96,8 +96,10 @@ prob.dt.list <- list()
 lik.dt.list <- list()
 trans.dt.list <- list()
 mean.dt.list <- list()
-max.it <- 50
-for(iteration in 1:max.it){
+done <- FALSE
+prev.log.lik <- -Inf
+iteration <- 1
+while(!done){
   log.emission.mat <- dnorm(
     matrix(y.vec, N.data, n.states, byrow=FALSE),
     matrix(mean.vec, N.data, n.states, byrow=TRUE),
@@ -116,16 +118,18 @@ for(iteration in 1:max.it){
   resid.mat <- y.vec-matrix(mean.vec, N.data, n.states, byrow=TRUE)
   var.est <- sum(prob.mat * resid.mat^2) / sum(prob.mat)
   (sd.param <- sqrt(var.est))
-  A.mat <- plotHMM::transition_interface(log.gamma.mat, log.xi.array)
+  A.mat <- plotHMM::transition_interface(
+    log.gamma.mat[-N.data,], log.xi.array)
   ##apply(log.gamma.mat, 1, which.max)
   trans.dt.list[[iteration]] <- data.table(
     iteration,
     prob=as.numeric(A.mat),
     from.state=as.integer(row(A.mat)),
     to.state=as.integer(col(A.mat)))
+  log.lik <- fwd.list[["log_lik"]]
   lik.dt.list[[iteration]] <- data.table(
     iteration,
-    log.lik=fwd.list[["log_lik"]])
+    log.lik)
   mean.dt.list[[iteration]] <- data.table(
     iteration,
     state=factor(seq_along(mean.vec)),
@@ -136,6 +140,11 @@ for(iteration in 1:max.it){
     prob=as.numeric(prob.mat),
     data.i=as.integer(row(prob.mat)),
     state=factor(as.integer(col(prob.mat))))
+  iteration <- iteration+1
+  if(log.lik <= prev.log.lik){
+    done <- TRUE
+  }
+  prev.log.lik <- log.lik
 }
 prob.dt <- do.call(rbind, prob.dt.list)
 mean.dt <- do.call(rbind, mean.dt.list)
@@ -149,20 +158,17 @@ dens.dt <- mean.dt[, .(
   density=dnorm(y.grid, mean, sd)
 ), by=.(iteration, state)]
 ## https://web.stanford.edu/~jurafsky/slp3/A.pdf
-
 ggplot()+
   geom_point(aes(
     iteration, log.lik),
     data=lik.dt)
 
-
 ## comparing sd with binseg.
 segs <- coef(binsegRcpp::binseg_normal(y.vec, 4), 4L)
 setkey(segs, start, end)
-one.dt[, i := .I]
-one.dt[, data.i := .I]
-setkey(one.dt, i, data.i)
-over.dt <- foverlaps(one.dt, segs)
+chrom.dt[, i := data.i]
+setkey(chrom.dt, i, data.i)
+over.dt <- foverlaps(chrom.dt, segs)
 over.dt[, resid := logratio-mean]
 over.dt[, sqrt(mean(resid^2))]
 ## TODO draw transition matrix.
@@ -178,25 +184,165 @@ gg <- ggplot()+
   geom_text(aes(
     0, mean, color=state, label=paste(state, " ")),
     hjust=1,
-    data=data.table(xpanel="dens", ypanel="data values", it.mean))+
+    data=data.table(xpanel="density", ypanel="data values", it.mean))+
   geom_blank(aes(
     density, y),
-    data=data.table(xpanel="dens", ypanel="data values", dens.dt))+
+    data=data.table(xpanel="density", ypanel="data values", dens.dt))+
   geom_path(aes(
     density, y, color=state),
-    data=data.table(xpanel="dens", ypanel="data values", it.dens))+
+    data=data.table(xpanel="density", ypanel="data values", it.dens))+
   scale_color_manual(values=state.values)+
   geom_point(aes(
     data.i, logratio),
-    data=data.table(xpanel="data.i", ypanel="data values", one.dt))+
+    data=data.table(xpanel="data.i", ypanel="data values", chrom.dt))+
   geom_blank(aes(
     data.i, prob),
-    data=data.table(xpanel="data.i", ypanel="prob", prob.dt))+
+    data=data.table(xpanel="data.i", ypanel="probability", prob.dt))+
   geom_line(aes(
     data.i, prob, color=state),
-    data=data.table(xpanel="data.i", ypanel="prob", it.prob))+
+    data=data.table(xpanel="data.i", ypanel="probability", it.prob))+
   facet_grid(ypanel ~ xpanel, scales="free")
 gg
 
 ```
 
+---
+
+# HMM on whole profile
+
+```{r}
+pro.dt <- nb.dt[profile.id=="4" & chromosome %in% paste(1:10)]
+ggplot()+
+  facet_grid(. ~ chromosome, scales="free", space="free")+
+  theme_bw()+
+  theme(panel.spacing=grid::unit(0, "lines"))+
+  scale_x_continuous(
+    "Position/index in data sequence",
+    breaks=seq(0, 1000, by=100))+
+  scale_y_continuous(
+    "logratio (approximate DNA copy number)")+
+  geom_point(aes(
+    data.i, logratio),
+    data=pro.dt)
+
+pro.dt[, row := 1:.N]
+all.y.vec <- pro.dt[["logratio"]]
+data.list <- split(pro.dt, paste(pro.dt[["chromosome"]]))
+first.row.vec <- pro.dt[data.i==1, row]
+last.row.vec <- pro.dt[, .SD[data.i==.N], by=chromosome][["row"]]
+n.states <- 4
+A.mat <- matrix(1/n.states, n.states, n.states)
+set.seed(1)
+mean.vec <- rnorm(n.states)
+sd.param <- 1
+pi.vec <- rep(1/n.states, n.states)
+prob.dt.list <- list()
+lik.dt.list <- list()
+trans.dt.list <- list()
+mean.dt.list <- list()
+done <- FALSE
+prev.log.lik <- -Inf
+iteration <- 1
+options(warn=2)
+while(!done){
+  log.lik.vec <- rep(NA, length(data.list))
+  all.log.gamma.mat <- matrix(NA, nrow(pro.dt), n.states)
+  all.log.xi.array <- array(NA, c(n.states, n.states, nrow(pro.dt)))
+  for(chrom.i in seq_along(data.list)){
+    one.chrom <- data.list[[chrom.i]]
+    row.vec <- one.chrom[["row"]]
+    y.vec <- one.chrom[["logratio"]]
+    N.data <- length(y.vec)
+    log.emission.mat <- dnorm(
+      matrix(y.vec, N.data, n.states, byrow=FALSE),
+      matrix(mean.vec, N.data, n.states, byrow=TRUE),
+      sd.param,
+      log=TRUE)
+    fwd.list <- plotHMM::forward_interface(log.emission.mat, A.mat, pi.vec)
+    log.alpha.mat <- fwd.list[["log_alpha"]]
+    log.lik.vec[[chrom.i]] <- fwd.list[["log_lik"]]
+    log.beta.mat <- plotHMM::backward_interface(log.emission.mat, A.mat)
+    all.log.gamma.mat[row.vec, ] <- plotHMM::multiply_interface(
+      log.alpha.mat, log.beta.mat)
+    all.log.xi.array[,, row.vec[-N.data] ] <- plotHMM::pairwise_interface(
+      log.emission.mat, A.mat, log.alpha.mat, log.beta.mat)
+  }
+  ## update rules.
+  prob.mat <- exp(all.log.gamma.mat)
+  (pi.vec <- colMeans(prob.mat[first.row.vec,]))
+  (mean.vec <- colSums(all.y.vec*prob.mat)/colSums(prob.mat))
+  resid.mat <- all.y.vec-matrix(
+    mean.vec, length(all.y.vec), n.states, byrow=TRUE)
+  var.est <- sum(prob.mat * resid.mat^2) / sum(prob.mat)
+  (sd.param <- sqrt(var.est))
+  A.mat <- plotHMM::transition_interface(
+    all.log.gamma.mat[-last.row.vec,],
+    all.log.xi.array[,, -last.row.vec])
+  ##apply(log.gamma.mat, 1, which.max)
+  trans.dt.list[[iteration]] <- data.table(
+    iteration,
+    prob=as.numeric(A.mat),
+    from.state=as.integer(row(A.mat)),
+    to.state=as.integer(col(A.mat)))
+  log.lik <- sum(log.lik.vec)
+  lik.dt.list[[iteration]] <- data.table(
+    iteration,
+    log.lik)
+  mean.dt.list[[iteration]] <- data.table(
+    iteration,
+    state=factor(seq_along(mean.vec)),
+    sd=sd.param,
+    mean=mean.vec)
+  prob.dt.list[[iteration]] <- data.table(
+    iteration,
+    prob=as.numeric(prob.mat),
+    row=as.integer(row(prob.mat)),
+    state=factor(as.integer(col(prob.mat))))
+  cat(sprintf("iteration=%4d log.lik=%f\n", iteration, log.lik))
+  iteration <- iteration+1
+  if(log.lik <= prev.log.lik){
+    done <- TRUE
+  }
+  prev.log.lik <- log.lik
+}
+prob.dt <- do.call(rbind, prob.dt.list)
+mean.dt <- do.call(rbind, mean.dt.list)
+lik.dt <- do.call(rbind, lik.dt.list)
+expand <- diff(range(y.vec))/10
+y.grid <- sort(c(
+  mean.dt$mean,
+  seq(min(y.vec)-expand, max(y.vec)+expand, l=201)))
+dens.dt <- mean.dt[, .(
+  y=y.grid,
+  density=dnorm(y.grid, mean, sd)
+), by=.(iteration, state)]
+ggplot()+
+  geom_point(aes(
+    iteration, log.lik),
+    data=lik.dt)
+
+## for debugging https://iulg.sitehost.iu.edu/moss/hmmcalculations.pdf
+it <- iteration-1
+it.mean <- mean.dt[iteration==it]
+it.dens <- dens.dt[iteration==it]
+it.prob <- prob.dt[iteration==it][pro.dt, on="row"]
+dput(RColorBrewer::brewer.pal(4, "Dark2"))
+state.values <- c("#1B9E77", "#D95F02", "#7570B3","#E7298A")
+gg <- ggplot()+
+  scale_x_continuous(
+    "Position/index in data sequence",
+    breaks=seq(0, 1000, by=100))+
+  ylab("")+
+  scale_color_manual(values=state.values)+
+  geom_point(aes(
+    data.i, logratio),
+    data=data.table(ypanel="data values", pro.dt))+
+  geom_line(aes(
+    data.i, prob, color=state),
+    data=data.table(ypanel="probability", it.prob))+
+  facet_grid(ypanel ~ chromosome, scales="free", space="free_x")+
+  theme_bw()+
+  theme(panel.spacing=grid::unit(0, "lines"))
+gg
+
+```

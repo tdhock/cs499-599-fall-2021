@@ -642,6 +642,7 @@ sd.param <- 1
 log.pi.vec <- log(rep(1/n.states, n.states))
 prob.dt.list <- list()
 lik.dt.list <- list()
+prior.dt.list <- list()
 trans.dt.list <- list()
 mean.dt.list <- list()
 viterbi.dt.list <- list()
@@ -692,7 +693,10 @@ while(!done){
   log.A.mat <- plotHMM::transition_interface(
     all.log.gamma.mat[-last.row.vec,],
     all.log.xi.array[,, -last.row.vec])
-  ##apply(log.gamma.mat, 1, which.max)
+  prior.dt.list[[iteration]] <- data.table(
+    iteration,
+    state=1:n.states,
+    prob=exp(log.pi.vec))
   trans.dt.list[[iteration]] <- data.table(
     iteration,
     prob=as.numeric(exp(log.A.mat)),
@@ -721,8 +725,11 @@ while(!done){
 }
 viterbi.dt <- do.call(rbind, viterbi.dt.list)
 prob.dt <- do.call(rbind, prob.dt.list)
+prior.dt <- do.call(rbind, prior.dt.list)
+trans.dt <- do.call(rbind, trans.dt.list)
 mean.dt <- do.call(rbind, mean.dt.list)
 lik.dt <- do.call(rbind, lik.dt.list)
+y.vec <- pro.dt$logratio
 expand <- diff(range(y.vec))/10
 y.grid <- sort(c(
   mean.dt$mean,
@@ -731,12 +738,25 @@ dens.dt <- mean.dt[, .(
   y=y.grid,
   density=dnorm(y.grid, mean, sd)
 ), by=.(iteration, state)]
+dens.dt[, norm.density := max(pro.dt$data.i)*density/max(density)]
+max.dens <- max(dens.dt$norm.density)
 ggplot()+
   geom_point(aes(
     iteration, log.lik),
     data=lik.dt)
 ## for debugging https://iulg.sitehost.iu.edu/moss/hmmcalculations.pdf
 baum.welch.multiple <- function(it){
+  tile.x.vec <- seq(0, max.dens, l=n.states+2)
+  names(tile.x.vec) <- seq(-1, n.states)
+  state.y <- seq(1, 0, l=n.states+2)[-c(1, n.states+2)]
+  it.trans <- trans.dt[iteration==it]
+  it.prior <- prior.dt[iteration==it]
+  it.dens <- dens.dt[iteration==it]
+  it.trans.prior <- rbind(
+    it.trans,
+    it.prior[, .(iteration, prob, from.state=state, to.state=-1)])
+  it.trans.prior[, x := tile.x.vec[paste(to.state)] ]
+  it.trans.prior[, y := state.y[from.state] ]
   it.lik <- lik.dt[iteration==it]
   it.mean <- mean.dt[iteration==it]
   it.viterbi <- viterbi.dt[iteration==it]
@@ -745,22 +765,22 @@ baum.welch.multiple <- function(it){
   state.values <- c(
     "#E7298A","#7570B3",
     "#1B9E77", "#D95F02")
+  cfac <- function(x)factor(x, c(1:10,"density"))
   ggplot()+
     scale_x_continuous(
       "Position/index in data sequence",
       breaks=seq(0, 1000, by=100)[-1])+
     ylab("")+
     scale_color_manual(values=state.values)+
-    scale_fill_manual(values=state.values, guide="none")+
     geom_text(aes(
       Inf, Inf, label=sprintf(
-        "it=%d log(lik)=%.4f", it, log.lik)),
+        "iteration=%d\nlog(lik)=%.4f", it, log.lik)),
       hjust=1,
       vjust=1.1,
       data=data.table(
         it.lik,
         ypanel="data values",
-        chromosome=factor("1", levels(it.prob$chromosome))))+
+        chromosome=cfac("1")))+
     geom_rect(aes(
       xmin=-Inf, xmax=Inf,
       ymin=mean-sd, ymax=mean+sd),
@@ -774,9 +794,44 @@ baum.welch.multiple <- function(it){
       size=1,
       data=data.table(ypanel="data values", it.mean))+
     geom_point(aes(
-      data.i, logratio, fill=state),
-      shape=21,
+      data.i, logratio, color=state),
       data=data.table(ypanel="data values", it.viterbi))+
+    geom_path(aes(
+      norm.density, y, color=state),
+      data=data.table(ypanel="data values", chromosome=cfac("density"), it.dens))+
+    geom_blank(aes(
+      norm.density, y),
+      data=data.table(ypanel="data values", chromosome=cfac("density"), dens.dt))+
+    geom_tile(aes(
+      x, y, fill=prob),
+      data=data.table(chromosome=cfac("density"), ypanel="probability", it.trans.prior))+
+    geom_text(aes(
+      x, y, label=sprintf("%.1f", prob)),
+      data=data.table(chromosome=cfac("density"), ypanel="probability", it.trans.prior))+
+    geom_text(aes(
+      x, y, label=state, color=state),
+      data=data.table(
+        chromosome=cfac("density"), ypanel="probability",
+        state=factor(1:n.states),
+        x=tile.x.vec[2],
+        y=state.y
+      ))+
+    geom_text(aes(
+      x, y, label=type, hjust=hjust),
+      vjust=1,
+      data=data.table(
+        chromosome=cfac("density"), ypanel="probability",
+        type=c("initial", "transition"),
+        x=tile.x.vec[c(1, n.states+2)],
+        hjust=c(0,1),
+        y=1
+      ))+
+    geom_text(aes(
+      Inf, Inf, label=sprintf("sd=%.4f", sd)),
+      vjust=1.1,
+      hjust=1,
+      data=data.table(ypanel="data values", chromosome=cfac("density"), it.mean[1]))+
+    scale_fill_gradient(low="white", high="red", limits=c(0,1))+
     geom_line(aes(
       data.i, prob, color=state),
       data=data.table(ypanel="probability", it.prob))+

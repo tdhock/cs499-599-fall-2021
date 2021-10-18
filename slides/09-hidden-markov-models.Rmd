@@ -45,66 +45,264 @@ ggplot()+
   number (two copies -- one from each parent), whereas higher logratio
   values indicate gain/amplification and lower values indicate
   loss/deletion.
-- HMMs have a hidden state variable which is associated with each
-  observed data variable in the sequence.
-- There are typically a finite number of hidden states/clusters,
-  $k\in\{1,\dots,K\}$.
+  
+---
+
+# HMM ideas
+
+- Each observed data variable in the sequence has a corresponding
+  un-observed (hidden) state variable.
+- There are typically a finite number of possible values for each
+  hidden state variable, $k\in\{1,\dots,K\}$.
+- Markov assumption: first-order dependency (each hidden variable only
+  depends on the previous hidden variable in the sequence).
+  
+```{r fig.height=3}
+N.vars <- 5
+var.dt <- data.table::CJ(
+  type=tfac(c("observed", "hidden")), 
+  data.i=1:N.vars)
+var.dt[, known := type == "observed"]
+arrow.dt <- rbind(
+  data.table(
+    x=seq(1, N.vars-1),
+    xend=seq(2, N.vars)-0.2,
+    y=1,
+    yend=1),
+  data.table(
+    x=1:N.vars,
+    xend=1:N.vars,
+    y=1, 
+    yend=0.1))
+gg <- ggplot()+
+  geom_segment(aes(
+    x, y, xend=xend, yend=yend),
+    arrow=grid::arrow(length=grid::unit(1, "lines")),
+    data=arrow.dt)+
+  geom_label(aes(
+    data.i, to.y(type),
+    fill=known,
+    label=paste0(type, "_", data.i)),
+    data=var.dt)+
+  scale_fill_manual(values=c("TRUE"="white", "FALSE"="grey"))+
+  scale_x_continuous(
+    "Index in data sequence")+
+  scale_y_continuous(
+    "Variable type",
+    breaks=NULL)
+gg
+
+```
 
 ---
 
-# Baum-Welch learning algorithm
+# Parameters of HMM
 
-Let $K$ be the number of hidden states. For every state we have
-- Let $A\in\mathbb [0,1]^{K\times K}$ be the transition matrix. Each
-  entry $a_{ij}$ is the probability of of being in state $i$ at some
-  time point $t$ and then at state $j$ at the next time point $t+1$.
-- Let $\pi_k$ be the initial state distribution (prior weights). 
-- There are also some emission distribution-specific parameters (mean,
-  covariance) that are used to define the probablity of observing data
-  $y$ in state $k$, $b_j(y)\in[0,1]$.
+- transition matrix: $A\in\mathbb [0,1]^{K\times K}$ for K
+  clusters. Each entry $a_{ij}$ is the probability of transitioning
+  from state $i$ to state $j$.
+- initial state distribution: $\pi\in[0,1]^K$ (prior weights). 
+- emission: define the probablity of observing data $y$ in state $k$,
+  $b_j(y)\in[0,1]$ (mean, covariance).
 - These parameters are unknown in advance and must be learned from the
   data.
 - Comparison with Gaussian Mixture Models: HMM has all of GMM
   parameters, plus transition matrix.
+  
+```{r, fig.height=3}
+param.dt <- rbind(
+  data.table(
+    x=seq(2, N.vars)-0.5,
+    y=1,
+    angle=0,
+    label="transition"),
+  data.table(
+    x=seq(1, N.vars),
+    y=0.5,
+    angle=90,
+    label="emission"),
+  data.table(
+    x=0.5, y=1, angle=0, label="initial"))
+param.dt[, known := FALSE]
+gg+
+  geom_segment(aes(
+    x, y, xend=xend, yend=yend),
+    arrow=grid::arrow(length=grid::unit(1, "lines")),
+    data=data.table(x=0.5, xend=0.8, y=1, yend=1))+
+  geom_label(aes(
+    x, y, label=label, angle=angle, fill=known),
+    vjust=1,
+    data=param.dt)
+```
+
+---
+
+# Three problems and algorithms
+
+```{r}
+## https://web.stanford.edu/~jurafsky/slp3/A.pdf
+```
+
+- Evaluation of likelihood of a given data sequence and model
+  parameters => forward algorithm.
+
+- Decoding most likely sequence of hidden states given observed data
+  => Viterbi algorithm.
+
+- Learning model parameters that maximize likelihood of a given data
+  set => Baum-Welch algorithm.
+  
+---
+
+# Forward algorithm
+
+- Assume each state $k\in\{1,\dots,K\}$ has an emission probability
+  function $b_k(o_t)$ for observed data $o_t$ at time $t$.
+- Let $a_{kj}$ be a transition parameter (probability of going from
+  state $k$ to state $j$).
+- Then we can recursively compute the forward path probability,
+  $\alpha_t(j) = \sum_{k=1}^K \alpha_{t-1}(k) a_{kj} b_j(o_t).$
+- Total log likelihood is summed over all states at the last data
+  point in the sequence.
+
+```{r, fig.height=3}
+mean.vec <- c(0.25, 0, -0.5)
+n.states <- length(mean.vec)
+y.vec <- chrom.dt[["logratio"]]
+A.mat <- matrix(1/n.states, n.states, n.states)
+sd.param <- 1
+## Need to compute emission whenever parameters are updated.
+N.data <- length(y.vec)
+log.emission.mat <- dnorm(
+  y.vec, 
+  matrix(mean.vec, N.data, n.states, byrow=TRUE),
+  sd.param,
+  log=TRUE)
+pi.vec <- rep(1/n.states, n.states)
+fwd.list <- plotHMM::forward_interface(log.emission.mat, A.mat, pi.vec)
+tile.dt <- with(fwd.list, data.table(
+  data.i=as.integer(row(log_alpha)),
+  state=as.integer(col(log_alpha)),
+  log.prob=as.numeric(log_alpha)))
+ggplot()+
+  scale_x_continuous(
+    "Position/index in data sequence")+
+  scale_y_continuous(
+    "logratio (approximate DNA copy number)")+
+  geom_point(aes(
+    data.i, logratio),
+    data=data.table(chrom.dt, ypanel="data values"))+
+  geom_tile(aes(
+    data.i, state, fill=log.prob),
+    color="black",
+    data=data.table(tile.dt, ypanel="forward probability"))+
+  scale_fill_gradient(low="white", high="red")+
+  facet_grid(ypanel ~ ., scales="free")
+
+```
+
+---
+
+# Viterbi algorithm
+
+- Assume each state $k\in\{1,\dots,K\}$ has an emission probability
+  function $b_k(o_t)$ for observed data $o_t$ at time $t$.
+- Let $a_{kj}$ be a transition parameter (probability of going from
+  state $k$ to state $j$).
+- Then we can recursively compute the probability of the best sequence
+  of hidden variables that ends at data point $t$ in state $j$,
+  $v_t(j) = \max_{k\in\{1,\dots,K\}} v_{t-1}(k) a_{kj} b_j(o_t).$
+  
+---
+
+# Viterbi algorithm example
+
+```{r fig.height=5, results=TRUE}
+mean.vec <- c(0.25, 0, -0.5)
+n.states <- length(mean.vec)
+y.vec <- chrom.dt[seq(1, .N, by=4), logratio]
+A.mat <- matrix(1/n.states, n.states, n.states)
+sd.param <- 1
+## Need to compute emission whenever parameters are updated.
+N.data <- length(y.vec)
+log.emission.mat <- dnorm(
+  y.vec, 
+  matrix(mean.vec, N.data, n.states, byrow=TRUE),
+  sd.param,
+  log=TRUE)
+pi.vec <- rep(1/n.states, n.states)
+str(list(mean=mean.vec, sd=sd.param, transition=A.mat, initial=pi.vec))
+viterbi.list <- plotHMM::viterbi_interface(log.emission.mat, A.mat, pi.vec)
+some.dt <- data.table(
+  data.i=seq_along(y.vec),
+  logratio=y.vec,
+  best_state_seq = factor(viterbi.list$state_seq))
+state.values <- c("#1B9E77", "#D95F02", "#7570B3")
+max.prob.dt <- with(viterbi.list, data.table(
+    data.i=as.integer(row(log_max_prob)),
+    state=as.integer(col(log_max_prob)),
+    log.prob=as.numeric(log_max_prob)))
+best.prev.dt <- with(viterbi.list, data.table(
+    data.i=as.integer(row(best_state)),
+    state=as.integer(col(best_state)),
+    best_prev=as.numeric(best_state)))
+ggplot()+
+  scale_x_continuous(
+    "Position/index in data sequence")+
+  scale_y_continuous(
+    "")+
+  scale_color_manual(values=state.values)+
+  geom_point(aes(
+    data.i, logratio, color=best_state_seq),
+    data=data.table(some.dt, ypanel="data values"))+
+  geom_tile(aes(
+    data.i, state, fill=log.prob),
+    color="black",
+    data=data.table(max.prob.dt, ypanel="best prev\nstate/prob"))+
+  geom_text(aes(
+    data.i, state, label=best_prev),
+    data=data.table(best.prev.dt, ypanel="best prev\nstate/prob"))+
+  scale_fill_gradient(low="white", high="red")+
+  facet_grid(ypanel ~ ., scales="free")
+
+
+```
 
 ---
 
 # Baum-Welch learning algorithm
 
-Let $K$ be the number of hidden states. For every state we have
-- Let $A\in\mathbb [0,1]^{K\times K}$ be the transition matrix. Each
-  entry $a_{ij}$ is the probability of of being in state $i$ at some
-  time point $t$ and then at state $j$ at the next time point $t+1$.
-- Let $\pi_k$ be the initial state distribution (prior weights). 
-- There are also some distribution-specific parameters (mean,
-  covariance) that are used to define the probablity of observing data
-  $y$ in state $k$, $b_j(y)\in[0,1]$.
+- Is an instance of Expectation-Maximization (EM), like the Gaussian
+  Mixture Model learning algorithm.
+- E step involves forward/backward passes over data sequences, to
+  compute probability of each data point in each state.
+- M step involves re-computing model parameters.
+- Repeat until the log likelihood stops increasing.
 
----
-
-# Computations
-
-```{r}
+```{r, fig.height=4}
 n.states <- 3
 A.mat <- matrix(1/n.states, n.states, n.states)
 mean.vec <- c(-1, 0, 1)*0.1
 y.vec <- chrom.dt[["logratio"]]
-sd.param <- 1
-pi.vec <- rep(1/n.states, n.states)
 N.data <- length(y.vec)
+sd.param <- 1
+## Need to compute emission whenever parameters are updated.
+log.emission.mat <- dnorm(
+  y.vec, 
+  matrix(mean.vec, N.data, n.states, byrow=TRUE),
+  sd.param,
+  log=TRUE)
+pi.vec <- rep(1/n.states, n.states)
 prob.dt.list <- list()
 lik.dt.list <- list()
 trans.dt.list <- list()
 mean.dt.list <- list()
+viterbi.dt.list <- list()
+prior.dt.list <- list()
 done <- FALSE
 prev.log.lik <- -Inf
 iteration <- 1
 while(!done){
-  log.emission.mat <- dnorm(
-    matrix(y.vec, N.data, n.states, byrow=FALSE),
-    matrix(mean.vec, N.data, n.states, byrow=TRUE),
-    sd.param,
-    log=TRUE)
   fwd.list <- plotHMM::forward_interface(log.emission.mat, A.mat, pi.vec)
   log.alpha.mat <- fwd.list[["log_alpha"]]
   log.beta.mat <- plotHMM::backward_interface(log.emission.mat, A.mat)
@@ -120,12 +318,27 @@ while(!done){
   (sd.param <- sqrt(var.est))
   A.mat <- plotHMM::transition_interface(
     log.gamma.mat[-N.data,], log.xi.array)
-  ##apply(log.gamma.mat, 1, which.max)
+  ## M step done, now store stuff to plot.
+  log.emission.mat <- dnorm( #need to compute after M step for viterbi.
+    y.vec, 
+    matrix(mean.vec, N.data, n.states, byrow=TRUE),
+    sd.param,
+    log=TRUE)
+  viterbi.result <- plotHMM::viterbi_interface(
+    log.emission.mat, A.mat, pi.vec)
+  viterbi.dt.list[[iteration]] <- data.table(
+    iteration,
+    data.i=1:N.data,
+    state=factor(viterbi.result[["state_seq"]]))
   trans.dt.list[[iteration]] <- data.table(
     iteration,
     prob=as.numeric(A.mat),
     from.state=as.integer(row(A.mat)),
     to.state=as.integer(col(A.mat)))
+  prior.dt.list[[iteration]] <- data.table(
+    iteration,
+    state=1:n.states,
+    prob=pi.vec)
   log.lik <- fwd.list[["log_lik"]]
   lik.dt.list[[iteration]] <- data.table(
     iteration,
@@ -146,8 +359,11 @@ while(!done){
   }
   prev.log.lik <- log.lik
 }
+viterbi.dt <- do.call(rbind, viterbi.dt.list)
 prob.dt <- do.call(rbind, prob.dt.list)
 mean.dt <- do.call(rbind, mean.dt.list)
+trans.dt <- do.call(rbind, trans.dt.list)
+prior.dt <- do.call(rbind, prior.dt.list)
 lik.dt <- do.call(rbind, lik.dt.list)
 expand <- diff(range(y.vec))/10
 y.grid <- sort(c(
@@ -157,60 +373,150 @@ dens.dt <- mean.dt[, .(
   y=y.grid,
   density=dnorm(y.grid, mean, sd)
 ), by=.(iteration, state)]
-## https://web.stanford.edu/~jurafsky/slp3/A.pdf
 ggplot()+
   geom_point(aes(
     iteration, log.lik),
     data=lik.dt)
-
-## comparing sd with binseg.
-segs <- coef(binsegRcpp::binseg_normal(y.vec, 4), 4L)
-setkey(segs, start, end)
-chrom.dt[, i := data.i]
-setkey(chrom.dt, i, data.i)
-over.dt <- foverlaps(chrom.dt, segs)
-over.dt[, resid := logratio-mean]
-over.dt[, sqrt(mean(resid^2))]
-## TODO draw transition matrix.
-it <- 41
-it.mean <- mean.dt[iteration==it]
-it.dens <- dens.dt[iteration==it]
-it.prob <- prob.dt[iteration==it]
-dput(RColorBrewer::brewer.pal(3, "Dark2"))
-state.values <- c("#1B9E77", "#D95F02", "#7570B3")
-gg <- ggplot()+
-  xlab("")+
-  ylab("")+
-  geom_text(aes(
-    0, mean, color=state, label=paste(state, " ")),
-    hjust=1,
-    data=data.table(xpanel="density", ypanel="data values", it.mean))+
-  geom_blank(aes(
-    density, y),
-    data=data.table(xpanel="density", ypanel="data values", dens.dt))+
-  geom_path(aes(
-    density, y, color=state),
-    data=data.table(xpanel="density", ypanel="data values", it.dens))+
-  scale_color_manual(values=state.values)+
-  geom_point(aes(
-    data.i, logratio),
-    data=data.table(xpanel="data.i", ypanel="data values", chrom.dt))+
-  geom_blank(aes(
-    data.i, prob),
-    data=data.table(xpanel="data.i", ypanel="probability", prob.dt))+
-  geom_line(aes(
-    data.i, prob, color=state),
-    data=data.table(xpanel="data.i", ypanel="probability", it.prob))+
-  facet_grid(ypanel ~ xpanel, scales="free")
-gg
-
+baum.welch.one <- function(it){
+  max.dens <- max(dens.dt$density)
+  tile.x.vec <- seq(0, max.dens, l=n.states+2)
+  names(tile.x.vec) <- seq(-1, n.states)
+  state.y <- seq(1, 0, l=n.states+2)[-c(1, n.states+2)]
+  it.viterbi <- viterbi.dt[iteration==it]
+  it.mean <- mean.dt[iteration==it]
+  it.trans <- trans.dt[iteration==it]
+  it.prior <- prior.dt[iteration==it]
+  it.lik <- lik.dt[iteration==it]
+  it.trans.prior <- rbind(
+    it.trans,
+    it.prior[, .(iteration, prob, from.state=state, to.state=-1)])
+  it.trans.prior[, x := tile.x.vec[paste(to.state)] ]
+  it.trans.prior[, y := state.y[from.state] ]
+  it.dens <- dens.dt[iteration==it]
+  it.prob <- prob.dt[iteration==it]
+  state.values <- c("#1B9E77", "#D95F02", "#7570B3")
+  chrom.dt[, state := it.viterbi[["state"]] ]
+  ggplot()+
+    xlab("")+
+    ylab("")+
+    geom_text(aes(
+      0, mean, color=state, label=paste(state, " ")),
+      hjust=1,
+      data=data.table(xpanel="density", ypanel="data values", it.mean))+
+    geom_blank(aes(
+      density, y),
+      data=data.table(xpanel="density", ypanel="data values", dens.dt))+
+    geom_tile(aes(
+      x, y, fill=prob),
+      data=data.table(xpanel="density", ypanel="probability", it.trans.prior))+
+    geom_text(aes(
+      x, y, label=sprintf("%.3f", prob)),
+      data=data.table(xpanel="density", ypanel="probability", it.trans.prior))+
+    geom_text(aes(
+      x, y, label=state, color=state),
+      data=data.table(
+        xpanel="density", ypanel="probability",
+        state=factor(1:n.states),
+        x=tile.x.vec[2],
+        y=state.y
+      ))+
+    geom_text(aes(
+      x, y, label=type, hjust=hjust),
+      vjust=1,
+      data=data.table(
+        xpanel="density", ypanel="probability",
+        type=c("prior", "transition"),
+        x=tile.x.vec[c(1, n.states+2)],
+        hjust=c(0,1),
+        y=1
+      ))+
+    geom_path(aes(
+      density, y, color=state),
+      data=data.table(xpanel="density", ypanel="data values", it.dens))+
+    scale_color_manual(values=state.values)+
+    scale_fill_gradient(low="white", high="red")+
+    geom_point(aes(
+      data.i, logratio, color=state),
+      data=data.table(xpanel="data.i", ypanel="data values", chrom.dt))+
+    geom_text(aes(
+      Inf, Inf, label=sprintf(
+        "iteration=%d log(lik)=%.4f", it, log.lik)),
+      hjust=1,
+      vjust=1.1,
+      data=data.table(xpanel="data.i", ypanel="data values", it.lik))+
+    geom_line(aes(
+      data.i, prob, color=state),
+      data=data.table(xpanel="data.i", ypanel="probability", it.prob))+
+    facet_grid(ypanel ~ xpanel, scales="free")
+}
 ```
 
 ---
 
-# HMM on whole profile
+# Visualization of learning iterations
 
 ```{r}
+baum.welch.one(1)
+```
+
+---
+
+# Visualization of learning iterations
+
+```{r}
+baum.welch.one(10)
+```
+
+---
+
+# Visualization of learning iterations
+
+```{r}
+baum.welch.one(20)
+```
+
+---
+
+# Visualization of learning iterations
+
+```{r}
+baum.welch.one(30)
+```
+
+---
+
+# Visualization of learning iterations
+
+```{r}
+baum.welch.one(35)
+```
+
+---
+
+# Visualization of learning iterations
+
+```{r}
+baum.welch.one(45)
+```
+
+---
+
+# Visualization of learning iterations
+
+```{r}
+baum.welch.one(40)
+```
+
+---
+
+# Shared states between chromosomes on a profile?
+
+- Sometimes there are several data sequences which are assumed to have
+  the same set of hidden states.
+- In this case Baum-Welch can be used to fit HMM to all data at the
+  same time (total log likelihood is summed over all data sequences).
+
+```{r, fig.height=5}
 pro.dt <- nb.dt[profile.id=="4" & chromosome %in% paste(1:10)]
 ggplot()+
   facet_grid(. ~ chromosome, scales="free", space="free")+
@@ -224,7 +530,13 @@ ggplot()+
   geom_point(aes(
     data.i, logratio),
     data=pro.dt)
+```
 
+---
+
+# HMM on whole profile
+
+```{r}
 pro.dt[, row := 1:.N]
 all.y.vec <- pro.dt[["logratio"]]
 data.list <- split(pro.dt, paste(pro.dt[["chromosome"]]))
@@ -240,6 +552,7 @@ prob.dt.list <- list()
 lik.dt.list <- list()
 trans.dt.list <- list()
 mean.dt.list <- list()
+viterbi.dt.list <- list()
 done <- FALSE
 prev.log.lik <- -Inf
 iteration <- 1
@@ -266,6 +579,12 @@ while(!done){
       log.alpha.mat, log.beta.mat)
     all.log.xi.array[,, row.vec[-N.data] ] <- plotHMM::pairwise_interface(
       log.emission.mat, A.mat, log.alpha.mat, log.beta.mat)
+    viterbi.result <- plotHMM::viterbi_interface(
+      log.emission.mat, A.mat, pi.vec)
+    viterbi.dt.list[[paste(iteration, chrom.i)]] <- data.table(
+      iteration, chrom.i,
+      one.chrom, 
+      state=factor(viterbi.result[["state_seq"]]))
   }
   ## update rules.
   prob.mat <- exp(all.log.gamma.mat)
@@ -305,6 +624,7 @@ while(!done){
   }
   prev.log.lik <- log.lik
 }
+viterbi.dt <- do.call(rbind, viterbi.dt.list)
 prob.dt <- do.call(rbind, prob.dt.list)
 mean.dt <- do.call(rbind, mean.dt.list)
 lik.dt <- do.call(rbind, lik.dt.list)
@@ -320,29 +640,113 @@ ggplot()+
   geom_point(aes(
     iteration, log.lik),
     data=lik.dt)
-
 ## for debugging https://iulg.sitehost.iu.edu/moss/hmmcalculations.pdf
-it <- iteration-1
-it.mean <- mean.dt[iteration==it]
-it.dens <- dens.dt[iteration==it]
-it.prob <- prob.dt[iteration==it][pro.dt, on="row"]
-dput(RColorBrewer::brewer.pal(4, "Dark2"))
-state.values <- c("#1B9E77", "#D95F02", "#7570B3","#E7298A")
-gg <- ggplot()+
-  scale_x_continuous(
-    "Position/index in data sequence",
-    breaks=seq(0, 1000, by=100))+
-  ylab("")+
-  scale_color_manual(values=state.values)+
-  geom_point(aes(
-    data.i, logratio),
-    data=data.table(ypanel="data values", pro.dt))+
-  geom_line(aes(
-    data.i, prob, color=state),
-    data=data.table(ypanel="probability", it.prob))+
-  facet_grid(ypanel ~ chromosome, scales="free", space="free_x")+
-  theme_bw()+
-  theme(panel.spacing=grid::unit(0, "lines"))
-gg
-
+baum.welch.multiple <- function(it){
+  it.lik <- lik.dt[iteration==it]
+  it.mean <- mean.dt[iteration==it]
+  it.viterbi <- viterbi.dt[iteration==it]
+  it.prob <- prob.dt[iteration==it][pro.dt, on="row"]
+  dput(RColorBrewer::brewer.pal(4, "Dark2"))
+  state.values <- c(
+    "#E7298A","#7570B3",
+    "#1B9E77", "#D95F02")
+  ggplot()+
+    scale_x_continuous(
+      "Position/index in data sequence",
+      breaks=seq(0, 1000, by=100))+
+    ylab("")+
+    scale_color_manual(values=state.values)+
+    scale_fill_manual(values=state.values)+
+    geom_text(aes(
+      Inf, Inf, label=sprintf(
+        "it=%d log(lik)=%.4f", it, log.lik)),
+      hjust=1,
+      vjust=1.1,
+      data=data.table(
+        it.lik,
+        ypanel="data values",
+        chromosome=factor("1", levels(it.prob$chromosome))))+
+    geom_hline(aes(
+      yintercept=mean),
+      size=2,
+      data=data.table(ypanel="data values", it.mean))+
+    geom_hline(aes(
+      yintercept=mean, color=state),
+      size=1,
+      data=data.table(ypanel="data values", it.mean))+
+    geom_point(aes(
+      data.i, logratio, fill=state),
+      shape=21,
+      data=data.table(ypanel="data values", it.viterbi))+
+    geom_line(aes(
+      data.i, prob, color=state),
+      data=data.table(ypanel="probability", it.prob))+
+    facet_grid(ypanel ~ chromosome, scales="free", space="free_x")+
+    theme_bw()+
+    theme(panel.spacing=grid::unit(0, "lines"))
+}
 ```
+
+---
+
+# Learning iterations using multiple sequences
+
+```{r}
+baum.welch.multiple(1)
+```
+
+---
+
+# Learning iterations using multiple sequences
+
+```{r}
+baum.welch.multiple(5)
+```
+
+---
+
+# Learning iterations using multiple sequences
+
+```{r}
+baum.welch.multiple(10)
+```
+
+---
+
+# Learning iterations using multiple sequences
+
+```{r}
+baum.welch.multiple(15)
+```
+
+---
+
+# Learning iterations using multiple sequences
+
+```{r}
+baum.welch.multiple(20)
+```
+
+---
+
+# Learning iterations using multiple sequences
+
+```{r}
+baum.welch.multiple(25)
+```
+
+---
+
+# Learning iterations using multiple sequences
+
+```{r}
+baum.welch.multiple(30)
+```
+
+---
+
+# Time/space complexity TODO
+
+---
+
+# Possible exam questions TODO

@@ -1,0 +1,63 @@
+Hidden Markov Models
+
+The goal of this homework is to fit hidden Markov Models on a real
+data set and compare them to optimal changepoint models.
+
+1. Plot the profile.id=79 and chromosome=2 from the neuroblastoma data
+   set (x=position, y=logratio). How many observations are there?
+
+2. Use depmixS4 R package to fit a sequence of Gaussian Hidden Markov
+   Models, from nstates=1 to 10. Use the logLik function to compute
+   the negative log likelihood for each model size. Then plot
+   y=negative log likelihood as a function of x=number of
+   states. After what model size is there a kink in the curve? (that
+   is the model size you should select)
+
+3. For the selected model size, plot the segmentation on top of the
+   data (for simplicity use x=index instead of position). Make sure to
+   show the mean (geom_segment), the standard deviation (geom_rect),
+   and the changepoints (geom_vline). How many changepoints are there?
+
+4. Run changepoint::cpt.meanvar(method="SegNeigh", penalty="Manual",
+   Q=the same number of segments as in the HMM) to compute the
+   corresponding optimal changepoint model, and plot that model on top
+   of the data (same as in problem 3). Which model seems to be a
+   better fit, or are they about the same? 
+
+*** CS599 Graduate students only
+
+The goal is to systematically compare the negative log likelihood of
+the two packages (changepoint and depmixS4).
+- changepoint::cpt.meanvar with Q segments should always compute the
+  optimal sequence of Q segment mean/variance parameters (Q-1
+  changepoints), using dynamic programming.
+- depmixS4/HMM always has nstates <= number of segments, so when there
+  are more segments than states the dynamic programming should have a
+  larger likelihood (better fit to data).
+- Run HMM for nstates=1 to 10, and compute the number of segments in
+  each model. For each model use changepoint::cpt.meanvar(Q=that
+  number of segments, penalty="Manual", method="SegNeigh"). If you get
+  an error for large nstates try a smaller number of states (less than
+  ten) or use tryCatch(code, error=function(e)NULL) to catch the
+  error.
+- Save segment mean/sd/start/end parameters for both algorithms and
+  all model sizes in a single data table. For cpt.meanvar you will
+  need to examine the @param.est and @cpts slots in order to get the
+  mean/sd/start/end values.
+- Compute the negative log likelihood using
+  -sum(stats::dnorm(vector_of_your_data, mean =
+  vector_of_fitted_means, sd = vector_of_fitted_sds, log = FALSE)).
+  Note that this is NOT the same as the value returned by the
+  depmixS4::logLik function (which also includes transition
+  likelihood). 
+- If you get infinite negative log likelihood, that is probably
+  because there is a segment with two data points with the same value
+  and zero variance. This is [[https://github.com/rkillick/changepoint/issues/49][a known issue]] with the cpt.meanvar
+  function. You can work around this issue by
+  - try cpt.meanvar(minseglen=3), to increase the minimum segment
+    length (the default is 2).
+  - OR remove the repeated data before computing the parameters of
+    both algorithms.
+- Plot the negative log likelihood as a function of the number of
+  segments, different algorithms in different colors (e.g., red=HMM,
+  black=DP). Is the curve lower for DP as expected?

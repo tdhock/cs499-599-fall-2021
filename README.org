@@ -120,7 +120,7 @@ that week, 11:59PM.
     detection).
   - Quizzes changepoint 2, optimal segmentation 1-2.
 - Oct 18, [[file:homeworks/09-hidden-markov-models.org][Homework week 9]]: Hidden Markov Models
-  - [[file:slides/09-hidden-markov-models.pdf][Slides]], [[file:depmixS4.pdf][depmixS4 vignette]] section 2. Markov Models, MLAPP-17.2. Hidden
+  - [[file:slides/09-hidden-markov-models.pdf][Slides]], [[https://cloud.r-project.org/web/packages/depmixS4/vignettes/depmixS4.pdf][depmixS4 vignette]] section 2. Markov Models, MLAPP-17.2. Hidden
     Markov Models, MLAPP-17.3-5. Learning for HMMs, MLAPP-17.5.
   - Quizzes HMM 1-3.
 - Oct 25, Homework week 10: Segmentation model selection

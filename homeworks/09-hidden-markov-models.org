@@ -24,6 +24,14 @@ data set and compare them to optimal changepoint models.
    of the data (same as in problem 3). Which model seems to be a
    better fit, or are they about the same? 
 
+*** FAQ
+
+Why do I get "NA/NaN/Inf in foreign function call" error? This may
+happen with certain initializations, when there are too many
+states. The error message should say something like "optimization not
+converging, which suggests that the model is not identifiable, try a
+smaller value for nstates, or try another random seed."
+
 *** CS599 Graduate students only
 
 The goal is to systematically compare the negative log likelihood of

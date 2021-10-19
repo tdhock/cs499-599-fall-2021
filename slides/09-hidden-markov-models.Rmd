@@ -7,7 +7,7 @@ output: beamer_presentation
 ```{r opts, echo=FALSE}
 knitr::opts_chunk$set(
   echo=FALSE, results=FALSE,
-  fig.width=10,
+  fig.width=11,
   fig.height=7)
 ```
 
@@ -151,7 +151,7 @@ gg+
   parameters => forward algorithm.
 
 - Decoding most likely sequence of hidden states given observed data
-  => Viterbi algorithm.
+  and model parameters => Viterbi algorithm.
 
 - Learning model parameters that maximize likelihood of a given data
   set => Baum-Welch algorithm.
@@ -276,25 +276,26 @@ data.table(log.p=-324, log.q=seq(-320, -326)
   
 ---
 
-# Viterbi algorithm example
+# Viterbi algorithm example for $K=3$ states
 
 ```{r fig.height=5, results=TRUE}
-mean.vec <- c(0.25, 0, -0.5)
+mean.vec <- c(-0.5, 0, 0.3)
 n.states <- length(mean.vec)
+log.pi.vec <- log(c(0.6, 0.2, 0.2))
+##log.pi.vec <- log(rep(1/n.states, n.states))
 y.vec <- chrom.dt[seq(1, .N, by=20), logratio]
-A.mat <- matrix(0.1, n.states, n.states)
-diag(A.mat) <- 0.8
-##A.mat
+diag.entry <- 0.6
+A.mat <- matrix((1-diag.entry)/2, n.states, n.states)
+diag(A.mat) <- diag.entry
+##A.mat <- matrix(1/n.states, n.states, n.states)
 log.A.mat <- log(A.mat)
-sd.param <- 0.1
-## Need to compute emission whenever parameters are updated.
+sd.param <- 0.2
 N.data <- length(y.vec)
 log.emission.mat <- dnorm(
   y.vec, 
   matrix(mean.vec, N.data, n.states, byrow=TRUE),
   sd.param,
   log=TRUE)
-log.pi.vec <- log(rep(1/n.states, n.states))
 str(list(
   mean=mean.vec,
   sd=sd.param,
@@ -306,7 +307,7 @@ some.dt <- data.table(
   data.i=seq_along(y.vec),
   logratio=y.vec,
   best_state_seq = factor(viterbi.list$state_seq))
-state.values <- c("#1B9E77", "#D95F02", "#7570B3")
+state.values <- c("#1B9E77", "#D95F02", "#7570B3", "white")
 max.prob.dt <- with(viterbi.list, data.table(
     data.i=as.integer(row(log_max_prob)),
     state=as.integer(col(log_max_prob)),
@@ -314,25 +315,308 @@ max.prob.dt <- with(viterbi.list, data.table(
 best.prev.dt <- with(viterbi.list, data.table(
     data.i=as.integer(row(best_state)),
     state=as.integer(col(best_state)),
-    best_prev=as.numeric(best_state)))
-ggplot()+
-  scale_x_continuous(
-    "Position/index in data sequence")+
-  scale_y_continuous(
-    "")+
-  scale_color_manual(values=state.values)+
-  geom_point(aes(
-    data.i, logratio, color=best_state_seq),
-    data=data.table(some.dt, ypanel="data values"))+
-  geom_tile(aes(
-    data.i, state, fill=log.prob),
-    color="black",
-    data=data.table(max.prob.dt, ypanel="best prev\nstate/prob"))+
-  geom_text(aes(
-    data.i, state, label=best_prev),
-    data=data.table(best.prev.dt, ypanel="best prev\nstate/prob"))+
-  scale_fill_gradient(low="white", high="red")+
-  facet_grid(ypanel ~ ., scales="free")
+    best_prev=as.numeric(best_state))
+    )[data.i>1]
+ypanel <- "best prev\nstate/prob"
+back.segs <- data.table(
+  data.t=2:nrow(some.dt),
+  state.t=viterbi.list$state_seq[-1],
+  data.prev=seq(1, nrow(some.dt)-1),
+  state.prev=viterbi.list$state_seq[-nrow(some.dt)])
+options(warn=1)
+blank.points <- geom_blank(aes(
+  data.i, logratio, color=best_state_seq),
+  data=data.table(
+    data.i=1,logratio=0,best_state_seq=c(1:n.states, "unknown"),
+    ypanel="data values"))
+viterbi.back <- function(data.hilite){
+  some.segs <- back.segs[data.t>=data.hilite+1]
+  this.hilite <- some.dt[data.i==data.hilite]
+  hilite.data <- data.table(some.dt)
+  hilite.data[data.i < data.hilite, best_state_seq := "unknown"]
+  gg <- ggplot()+
+    theme(panel.grid.minor=element_blank())+
+    scale_x_continuous(
+      "Position/index in data sequence",
+      breaks=1:nrow(some.dt))+
+    scale_y_continuous(
+      "")+
+    scale_color_manual(values=state.values)+
+    geom_point(aes(
+      data.i, logratio),
+      size=3,
+      color="grey",
+      data=data.table(some.dt, ypanel="data values"))+
+    blank.points+
+    geom_blank(aes(
+      x, y),
+      data=data.table(x=c(0, nrow(some.dt)+1), y=1, ypanel))+
+    geom_tile(aes(
+      data.i, state, fill=log.prob),
+      color="transparent",
+      data=data.table(max.prob.dt, ypanel))
+  if(nrow(this.hilite)){
+    gg <- gg+
+    geom_tile(aes(
+      data.i, as.integer(best_state_seq)),
+      color="black",
+      size=1,
+      fill="transparent",
+      data=data.table(this.hilite, ypanel))+
+    geom_point(aes(
+      data.i, logratio),
+      size=3,
+      color="black",
+      data=data.table(this.hilite, ypanel="data values"))
+  }
+  if(nrow(some.segs)){
+    gg <- gg+
+    geom_segment(aes(
+      data.t, state.t,
+      xend=data.prev, yend=state.prev),
+      data=data.table(some.segs, ypanel),
+      size=1,
+      color="grey")
+  }
+  gg <- gg+
+    geom_point(aes(
+      data.i, logratio, color=best_state_seq),
+      data=data.table(hilite.data, ypanel="data values"))+
+    geom_text(aes(
+      data.i, state, label=best_prev),
+      data=data.table(best.prev.dt, ypanel))+
+    scale_fill_gradient(low="white", high="red")+
+    facet_grid(ypanel ~ ., scales="free")
+  gg
+}
+viterbi.back(0)
+
+viterbi.forward <- function(data.t, state.k){
+  some <- function(DT){
+    DT[data.i<data.t | data.i==data.t & state<=state.k]
+  }
+  hilite.data <- data.table(some.dt)
+  hilite.data[, best_state_seq := "unknown"]
+  seg.dt <- data.table(
+    data.prev=data.t-1,
+    data.t,
+    state.prev=1:n.states,
+    state.k)
+  ggplot()+
+    theme(panel.grid.minor=element_blank())+
+    scale_x_continuous(
+      "Position/index in data sequence",
+      breaks=1:nrow(some.dt))+
+    scale_y_continuous(
+      "")+
+    scale_color_manual(values=state.values)+
+    blank.points+
+    geom_blank(aes(
+      x, y),
+      data=data.table(x=c(0, nrow(some.dt)+1), y=1, ypanel))+
+    geom_point(aes(
+      data.i, logratio),
+      size=3,
+      color="grey",
+      data=data.table(some.dt, ypanel="data values"))+
+    geom_point(aes(
+      data.i, logratio, color=best_state_seq),
+      data=data.table(hilite.data, ypanel="data values"))+
+    geom_tile(aes(
+      data.i, state, fill=log.prob),
+      color="transparent",
+      data=data.table(
+        some(max.prob.dt),
+        ypanel))+
+    geom_blank(aes(
+      data.i, state, fill=log.prob),
+      data=data.table(
+        max.prob.dt,
+        ypanel))+
+    geom_segment(aes(
+      data.t, state.k,
+      xend=data.prev, yend=state.prev),
+      data=data.table(
+        seg.dt,
+        ypanel),
+      size=1,
+      color="grey")+
+    geom_text(aes(
+      data.i, state, label=best_prev),
+      data=data.table(
+        some(best.prev.dt),
+        ypanel))+
+    scale_fill_gradient(low="white", high="red")+
+    facet_grid(ypanel ~ ., scales="free")
+}
+```
+
+---
+
+# Viterbi forward pass
+
+```{r}
+viterbi.forward(2, 1)
+```
+
+---
+
+# Viterbi forward pass
+
+```{r}
+viterbi.forward(2, 2)
+```
+
+---
+
+# Viterbi forward pass
+
+```{r}
+viterbi.forward(2, 3)
+```
+
+---
+
+# Viterbi forward pass
+
+```{r}
+viterbi.forward(3, 1)
+```
+
+---
+
+# Viterbi forward pass
+
+```{r}
+viterbi.forward(3, 2)
+```
+
+---
+
+# Viterbi forward pass
+
+```{r}
+viterbi.forward(3, 3)
+```
+
+---
+
+# Viterbi forward pass
+
+```{r}
+viterbi.forward(12, 1)
+```
+
+---
+
+# Viterbi forward pass
+
+```{r}
+viterbi.forward(12, 2)
+```
+
+---
+
+# Viterbi forward pass
+
+```{r}
+viterbi.forward(12, 3)
+```
+
+---
+
+# Viterbi backtracking
+
+```{r}
+viterbi.back(12)
+```
+
+---
+
+# Viterbi backtracking
+
+```{r}
+viterbi.back(11)
+```
+
+---
+
+# Viterbi backtracking
+
+```{r}
+viterbi.back(10)
+```
+
+---
+
+# Viterbi backtracking
+
+```{r}
+viterbi.back(9)
+```
+
+---
+
+# Viterbi backtracking
+
+```{r}
+viterbi.back(8)
+```
+
+---
+
+# Viterbi backtracking
+
+```{r}
+viterbi.back(7)
+```
+
+---
+
+# Viterbi backtracking
+
+```{r}
+viterbi.back(6)
+```
+
+---
+
+# Viterbi backtracking
+
+```{r}
+viterbi.back(5)
+```
+
+---
+
+# Viterbi backtracking
+
+```{r}
+viterbi.back(4)
+```
+
+---
+
+# Viterbi backtracking
+
+```{r}
+viterbi.back(3)
+```
+
+---
+
+# Viterbi backtracking
+
+```{r}
+viterbi.back(2)
+```
+
+---
+
+# Viterbi backtracking
+
+```{r}
+viterbi.back(1)
 ```
 
 ---
@@ -935,8 +1219,10 @@ baum.welch.multiple(35)
 
 For $K$ states and $N$ data
 
-- Forward/Viterbi: $O(K^2 N)$ time, $O(K N)$ space.
+- Forward/Viterbi: $O(K^2 N)$ time, $O(K^2 + K N)$ space.
 - Each iteration of Baum-Welch: $O(K^2 N)$ time and space.
+- Some asymptotic speedups are possible in special cases, for example
+  sparse transition matrices, see Murphy book.
 
 ---
 

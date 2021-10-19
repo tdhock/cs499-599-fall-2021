@@ -281,9 +281,12 @@ data.table(log.p=-324, log.q=seq(-320, -326)
 ```{r fig.height=5, results=TRUE}
 mean.vec <- c(0.25, 0, -0.5)
 n.states <- length(mean.vec)
-y.vec <- chrom.dt[seq(1, .N, by=4), logratio]
-log.A.mat <- log(matrix(1/n.states, n.states, n.states))
-sd.param <- 1
+y.vec <- chrom.dt[seq(1, .N, by=20), logratio]
+A.mat <- matrix(0.1, n.states, n.states)
+diag(A.mat) <- 0.8
+##A.mat
+log.A.mat <- log(A.mat)
+sd.param <- 0.1
 ## Need to compute emission whenever parameters are updated.
 N.data <- length(y.vec)
 log.emission.mat <- dnorm(
@@ -331,10 +334,6 @@ ggplot()+
   scale_fill_gradient(low="white", high="red")+
   facet_grid(ypanel ~ ., scales="free")
 ```
-
----
-
-# TODO simpler and more interesting Viterbi example
 
 ---
 
@@ -482,10 +481,6 @@ baum.welch.one <- function(it){
       yintercept=mean, color=state),
       size=1,
       data=data.table(ypanel="data values", it.mean))+
-    geom_label(aes(
-      0, mean, color=state, label=state),
-      hjust=1,
-      data=data.table(xpanel="density", ypanel="data values", it.mean))+
     geom_text(aes(
       Inf, Inf, label=sprintf("sd=%.4f", sd)),
       vjust=1.1,
@@ -500,6 +495,13 @@ baum.welch.one <- function(it){
     geom_text(aes(
       x, y, label=sprintf("%.3f", prob)),
       data=data.table(xpanel="density", ypanel="probability", it.trans.prior))+
+    geom_text(aes(
+      0, y, label="emission"),
+      hjust=0,
+      vjust=0,
+      data=data.table(
+        ypanel="data values", xpanel="density",
+        y=max(y.grid)))+
     geom_text(aes(
       x, y, label=state, color=state),
       data=data.table(
@@ -521,6 +523,10 @@ baum.welch.one <- function(it){
     geom_path(aes(
       density, y, color=state),
       data=data.table(xpanel="density", ypanel="data values", it.dens))+
+    geom_label(aes(
+      0, mean, color=state, label=state),
+      hjust=1,
+      data=data.table(xpanel="density", ypanel="data values", it.mean))+
     scale_color_manual(values=state.values)+
     scale_fill_gradient(low="white", high="red", limits=c(0,1))+
     geom_point(aes(
@@ -761,7 +767,6 @@ baum.welch.multiple <- function(it){
   it.mean <- mean.dt[iteration==it]
   it.viterbi <- viterbi.dt[iteration==it]
   it.prob <- prob.dt[iteration==it][pro.dt, on="row"]
-  dput(RColorBrewer::brewer.pal(4, "Dark2"))
   state.values <- c(
     "#E7298A","#7570B3",
     "#1B9E77", "#D95F02")
@@ -799,15 +804,30 @@ baum.welch.multiple <- function(it){
     geom_path(aes(
       norm.density, y, color=state),
       data=data.table(ypanel="data values", chromosome=cfac("density"), it.dens))+
+    geom_text(aes(
+      0, y, label="emission"),
+      hjust=0,
+      vjust=0,
+      data=data.table(
+        ypanel="data values", chromosome=cfac("density"),
+        y=max(y.grid)))+
     geom_blank(aes(
       norm.density, y),
-      data=data.table(ypanel="data values", chromosome=cfac("density"), dens.dt))+
+      data=data.table(
+        ypanel="data values", chromosome=cfac("density"), dens.dt))+
+    geom_label(aes(
+      0, mean, color=state, label=state),
+      hjust=1,
+      data=data.table(
+        chromosome=cfac("density"), ypanel="data values", it.mean))+
     geom_tile(aes(
       x, y, fill=prob),
-      data=data.table(chromosome=cfac("density"), ypanel="probability", it.trans.prior))+
+      data=data.table(
+        chromosome=cfac("density"), ypanel="probability", it.trans.prior))+
     geom_text(aes(
       x, y, label=sprintf("%.1f", prob)),
-      data=data.table(chromosome=cfac("density"), ypanel="probability", it.trans.prior))+
+      data=data.table(
+        chromosome=cfac("density"), ypanel="probability", it.trans.prior))+
     geom_text(aes(
       x, y, label=state, color=state),
       data=data.table(
@@ -830,7 +850,8 @@ baum.welch.multiple <- function(it){
       Inf, Inf, label=sprintf("sd=%.4f", sd)),
       vjust=1.1,
       hjust=1,
-      data=data.table(ypanel="data values", chromosome=cfac("density"), it.mean[1]))+
+      data=data.table(
+        ypanel="data values", chromosome=cfac("density"), it.mean[1]))+
     scale_fill_gradient(low="white", high="red", limits=c(0,1))+
     geom_line(aes(
       data.i, prob, color=state),
@@ -839,7 +860,6 @@ baum.welch.multiple <- function(it){
       data.i, prob),
       data=data.table(ypanel="probability", data.i=0, prob=c(0,1)))+
     facet_grid(ypanel ~ chromosome, scales="free", space="free_x")+
-    ## TODO add panels for density and initial/transition parameters.
     theme_bw()+
     theme(panel.spacing=grid::unit(0, "lines"))
 }

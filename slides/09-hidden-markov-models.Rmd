@@ -7,7 +7,7 @@ output: beamer_presentation
 ```{r opts, echo=FALSE}
 knitr::opts_chunk$set(
   echo=FALSE, results=FALSE,
-  fig.width=11,
+  fig.width=10,
   fig.height=7)
 ```
 
@@ -21,6 +21,12 @@ suppressPackageStartupMessages({
   library(data.table)
   library(ggplot2)
 })
+theme_set(
+  theme_bw()+
+    theme(
+      panel.spacing=grid::unit(0, "lines"),
+      text=element_text(size=20)))
+geom.text.size <- 5
 data(neuroblastoma, package="neuroblastoma")
 nb.dt <- data.table(neuroblastoma[["profiles"]])
 nb.dt[, data.i := rank(position), keyby=.(profile.id, chromosome)]
@@ -31,7 +37,7 @@ ggplot()+
   scale_y_continuous(
     "logratio (approximate DNA copy number)")+
   geom_point(aes(
-    position, logratio),
+    data.i, logratio),
     data=chrom.dt)
 ```
 
@@ -195,14 +201,14 @@ ggplot()+
   scale_x_continuous(
     "Position/index in data sequence")+
   scale_y_continuous(
-    "logratio (approximate DNA copy number)")+
+    "logratio")+
   geom_point(aes(
     data.i, logratio),
     data=data.table(chrom.dt, ypanel="data values"))+
   geom_tile(aes(
     data.i, state, fill=log.prob),
     color="black",
-    data=data.table(tile.dt, ypanel="forward probability"))+
+    data=data.table(tile.dt, ypanel="forward\nprobability"))+
   scale_fill_gradient(low="white", high="red")+
   facet_grid(ypanel ~ ., scales="free")
 
@@ -228,10 +234,10 @@ data.table(N.data, prob, log.prob=log10(prob))
 
 # Implementation details to avoid numerical underflow
 
-- Use a double precision number to store log(probability) value
-  instead of probability value.
+- Use a double precision number to store log(probability) value, $\log p$,
+  instead of probability value, $p$.
 - Instead of multiplying probability values, sum log(probability)
-  values.
+  values: $\log(pq) = \log p + \log q$.
 
 ```{r, echo=TRUE, results=TRUE}
 N.data <- seq(321, 325)
@@ -317,7 +323,7 @@ best.prev.dt <- with(viterbi.list, data.table(
     state=as.integer(col(best_state)),
     best_prev=as.numeric(best_state))
     )[data.i>1]
-ypanel <- "best prev\nstate/prob"
+ypanel <- "best previous\nstate/probability"
 back.segs <- data.table(
   data.t=2:nrow(some.dt),
   state.t=viterbi.list$state_seq[-1],
@@ -329,25 +335,31 @@ blank.points <- geom_blank(aes(
   data=data.table(
     data.i=1,logratio=0,best_state_seq=c(1:n.states, "unknown"),
     ypanel="data values"))
+viterbi.color.scale <- scale_color_manual(
+  "Best state",
+  values=state.values)
+viterbi.theme <- theme(
+  panel.grid.minor=element_blank(),
+  legend.key=element_rect(fill="grey"))
 viterbi.back <- function(data.hilite){
   some.segs <- back.segs[data.t>=data.hilite+1]
   this.hilite <- some.dt[data.i==data.hilite]
   hilite.data <- data.table(some.dt)
   hilite.data[data.i < data.hilite, best_state_seq := "unknown"]
   gg <- ggplot()+
-    theme(panel.grid.minor=element_blank())+
     scale_x_continuous(
       "Position/index in data sequence",
       breaks=1:nrow(some.dt))+
     scale_y_continuous(
       "")+
-    scale_color_manual(values=state.values)+
+    viterbi.color.scale+
+    viterbi.theme+
+    blank.points+
     geom_point(aes(
       data.i, logratio),
       size=3,
       color="grey",
       data=data.table(some.dt, ypanel="data values"))+
-    blank.points+
     geom_blank(aes(
       x, y),
       data=data.table(x=c(0, nrow(some.dt)+1), y=1, ypanel))+
@@ -384,6 +396,7 @@ viterbi.back <- function(data.hilite){
       data=data.table(hilite.data, ypanel="data values"))+
     geom_text(aes(
       data.i, state, label=best_prev),
+      size=geom.text.size,
       data=data.table(best.prev.dt, ypanel))+
     scale_fill_gradient(low="white", high="red")+
     facet_grid(ypanel ~ ., scales="free")
@@ -409,7 +422,8 @@ viterbi.forward <- function(data.t, state.k){
       breaks=1:nrow(some.dt))+
     scale_y_continuous(
       "")+
-    scale_color_manual(values=state.values)+
+    viterbi.color.scale+
+    viterbi.theme+
     blank.points+
     geom_blank(aes(
       x, y),
@@ -443,6 +457,7 @@ viterbi.forward <- function(data.t, state.k){
       color="grey")+
     geom_text(aes(
       data.i, state, label=best_prev),
+      size=geom.text.size,
       data=data.table(
         some(best.prev.dt),
         ypanel))+
@@ -749,8 +764,6 @@ baum.welch.one <- function(it){
   state.values <- c("#1B9E77", "#D95F02", "#7570B3")
   chrom.dt[, state := it.viterbi[["state"]] ]
   ggplot()+
-    theme_bw()+
-    theme(panel.spacing=grid::unit(0, "lines"))+
     xlab("")+
     ylab("")+
     geom_rect(aes(
@@ -767,6 +780,7 @@ baum.welch.one <- function(it){
       data=data.table(ypanel="data values", it.mean))+
     geom_text(aes(
       Inf, Inf, label=sprintf("sd=%.4f", sd)),
+      size=geom.text.size,
       vjust=1.1,
       hjust=1,
       data=data.table(ypanel="data values", xpanel="density", it.mean[1]))+
@@ -778,9 +792,11 @@ baum.welch.one <- function(it){
       data=data.table(xpanel="density", ypanel="probability", it.trans.prior))+
     geom_text(aes(
       x, y, label=sprintf("%.3f", prob)),
+      size=geom.text.size,
       data=data.table(xpanel="density", ypanel="probability", it.trans.prior))+
     geom_text(aes(
       0, y, label="emission"),
+      size=geom.text.size,
       hjust=0,
       vjust=0,
       data=data.table(
@@ -788,6 +804,7 @@ baum.welch.one <- function(it){
         y=max(y.grid)))+
     geom_text(aes(
       x, y, label=state, color=state),
+      size=geom.text.size,
       data=data.table(
         xpanel="density", ypanel="probability",
         state=factor(1:n.states),
@@ -796,6 +813,7 @@ baum.welch.one <- function(it){
       ))+
     geom_text(aes(
       x, y, label=type, hjust=hjust),
+      size=geom.text.size,
       vjust=1,
       data=data.table(
         xpanel="density", ypanel="probability",
@@ -819,6 +837,7 @@ baum.welch.one <- function(it){
     geom_text(aes(
       Inf, Inf, label=sprintf(
         "iteration=%d log(lik)=%.4f", it, log.lik)),
+      size=geom.text.size,
       hjust=1,
       vjust=1.1,
       data=data.table(xpanel="data.i", ypanel="data values", it.lik))+
@@ -902,13 +921,11 @@ baum.welch.one(45)
 pro.dt <- nb.dt[profile.id=="4" & chromosome %in% paste(1:10)]
 ggplot()+
   facet_grid(. ~ chromosome, scales="free", space="free")+
-  theme_bw()+
-  theme(panel.spacing=grid::unit(0, "lines"))+
   scale_x_continuous(
     "Position/index in data sequence",
     breaks=seq(0, 1000, by=100))+
   scale_y_continuous(
-    "logratio (approximate DNA copy number)")+
+    "logratio (data values)")+
   geom_point(aes(
     data.i, logratio),
     data=pro.dt)
@@ -1058,12 +1075,13 @@ baum.welch.multiple <- function(it){
   ggplot()+
     scale_x_continuous(
       "Position/index in data sequence",
-      breaks=seq(0, 1000, by=100)[-1])+
+      breaks=c(100, 300))+
     ylab("")+
     scale_color_manual(values=state.values)+
     geom_text(aes(
       Inf, Inf, label=sprintf(
-        "iteration=%d\nlog(lik)=%.4f", it, log.lik)),
+        "iteration=%d\nlog(lik)=%.1f", it, log.lik)),
+      size=geom.text.size,
       hjust=1,
       vjust=1.1,
       data=data.table(
@@ -1087,14 +1105,8 @@ baum.welch.multiple <- function(it){
       data=data.table(ypanel="data values", it.viterbi))+
     geom_path(aes(
       norm.density, y, color=state),
-      data=data.table(ypanel="data values", chromosome=cfac("density"), it.dens))+
-    geom_text(aes(
-      0, y, label="emission"),
-      hjust=0,
-      vjust=0,
       data=data.table(
-        ypanel="data values", chromosome=cfac("density"),
-        y=max(y.grid)))+
+        ypanel="data values", chromosome=cfac("density"), it.dens))+
     geom_blank(aes(
       norm.density, y),
       data=data.table(
@@ -1109,11 +1121,14 @@ baum.welch.multiple <- function(it){
       data=data.table(
         chromosome=cfac("density"), ypanel="probability", it.trans.prior))+
     geom_text(aes(
-      x, y, label=sprintf("%.1f", prob)),
+      x, y, label=sprintf("%.2f", prob)),
+      angle=90,
+      size=geom.text.size,
       data=data.table(
         chromosome=cfac("density"), ypanel="probability", it.trans.prior))+
     geom_text(aes(
       x, y, label=state, color=state),
+      size=geom.text.size,
       data=data.table(
         chromosome=cfac("density"), ypanel="probability",
         state=factor(1:n.states),
@@ -1122,18 +1137,20 @@ baum.welch.multiple <- function(it){
       ))+
     geom_text(aes(
       x, y, label=type, hjust=hjust),
-      vjust=1,
+      vjust=1.1,
+      size=geom.text.size,
       data=data.table(
         chromosome=cfac("density"), ypanel="probability",
         type=c("initial", "transition"),
-        x=tile.x.vec[c(1, n.states+2)],
+        x=c(-Inf, Inf),
         hjust=c(0,1),
-        y=1
+        y=Inf
       ))+
     geom_text(aes(
-      Inf, Inf, label=sprintf("sd=%.4f", sd)),
+      Inf, Inf, label=sprintf("emission\nsd=%.4f", sd)),
       vjust=1.1,
       hjust=1,
+      size=geom.text.size,
       data=data.table(
         ypanel="data values", chromosome=cfac("density"), it.mean[1]))+
     scale_fill_gradient(low="white", high="red", limits=c(0,1))+
@@ -1143,9 +1160,7 @@ baum.welch.multiple <- function(it){
     geom_blank(aes(
       data.i, prob),
       data=data.table(ypanel="probability", data.i=0, prob=c(0,1)))+
-    facet_grid(ypanel ~ chromosome, scales="free", space="free_x")+
-    theme_bw()+
-    theme(panel.spacing=grid::unit(0, "lines"))
+    facet_grid(ypanel ~ chromosome, scales="free", space="free_x")
 }
 ```
 
@@ -1231,12 +1246,12 @@ For $K$ states and $N$ data
 - K-means and Gaussian mixture models also have cluster-specific
   parameters (mean, covariance, prior weight), but are not able to
   model sequential dependence.
-- Binary/optimal segmentation require specification of number of
-  segments/changepoints rather than number of hidden states.
 - All segmentation models we studied had $K$ mean parameters, and a
   single variance/sd parameter common to all segments.
-- Binary/optimal segmentation always jump to a new mean parameter,
-  whereas HMM may jump to a previously visited mean parameter.
+- Binary/optimal segmentation require specification of number of
+  segments/changepoints (always jump to a new mean parameter) whereas
+  HMM requires number of hidden states (may jump to a previously
+  visited mean parameter).
 - Binary/optimal segmentation with $K$ segments can be interpreted as
   an HMM with a constrained transition matrix ($a_{ij}=1$ if $j=i+1$
   else 0: always jump to the next state, never jump back to a previous

@@ -250,7 +250,7 @@ data.table(N.data, log.prob, prob=10^log.prob)
 Instead of summing probability values, use log-sum-exp trick (subtract
 away $m=\max\{\log p, \log q\}$ in exponent), $p + q = e^{\log p} +
 e^{\log q}$.
-$$\log(p+q) = \log(e^{\log p} + e^{\log q}) = m + \log(e^{\log p-m}-e^{\log q-m})$$
+$$\log(p+q) = \log(e^{\log p} + e^{\log q}) = m + \log(e^{\log p-m}+e^{\log q-m})$$
 
 ```{r}
 options(warn=1)

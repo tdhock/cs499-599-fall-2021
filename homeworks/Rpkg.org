@@ -7,8 +7,10 @@ package, as well as writing efficient C/C++ code.
 To figure out how to write an R package, you can read the free
 online book [[https://r-pkgs.org/][R packages]].
 
-You need to select at least two functions that you coded in previous
-coding projects to include in your R package. (e.g. KMEANS and HCLUST)
+You need at least two algorithms from previous coding projects to
+include in your R package.
+- First project: choose from KMEANS, GMM, HCLUST.
+- Second project: include BINSEG and DYNPROG.
 
 For each function you need to
 - provide documentation that includes example code that shows how to

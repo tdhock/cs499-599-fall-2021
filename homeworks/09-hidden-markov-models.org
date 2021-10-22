@@ -54,7 +54,10 @@ the two packages (changepoint and depmixS4).
   mean/sd/start/end values.
 - Compute the negative log likelihood using
   -sum(stats::dnorm(vector_of_your_data, mean =
-  vector_of_fitted_means, sd = vector_of_fitted_sds, log = FALSE)).
+  vector_of_fitted_means, sd = vector_of_fitted_sds, log =
+  FALSE)). Make sure each of these vectors is the same length, and
+  that are the right values! (each data value has the right
+  corresponding mean/sd value based on the segment where it appears)
   Note that this is NOT the same as the value returned by the
   depmixS4::logLik function (which also includes transition
   likelihood). 

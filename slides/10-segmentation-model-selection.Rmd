@@ -106,7 +106,7 @@ For every model size $k\in\{1,\dots,K\}$ let $L_k$ be the loss.
 Information criteria choose the model which minimizes the penalized
 cost, for some non-negative penalty $\lambda\geq 0$,
 
-$$ C_k = \min_{
+$$ C(\lambda) = \min_{
 k\in\{1,\dots,K\} 
 } L_k + \lambda k $$
 

@@ -16,6 +16,7 @@ knitr::opts_chunk$set(
 ```
 
 ```{r colors}
+model.color <- "blue"
 type.colors <- c(
   last="deepskyblue",
   prev="red",
@@ -115,7 +116,7 @@ theme.mid <- theme(text=element_text(size=18))
 gg <- ggplot()+
   theme.mid+
   geom_text(aes(
-    1000, Inf,
+    1200, Inf,
     color=algorithm,
     hjust=ifelse(algorithm=="binseg", 0, 1),
     label=sprintf("%s loss=%.2f", algorithm, loss)),
@@ -150,7 +151,7 @@ gg
 # Zoom to start
 
 ```{r fig.height=8}
-gg+coord_cartesian(xlim=c(0, 200))
+gg+coord_cartesian(xlim=c(0, 300))
 ```
 
 ---
@@ -193,7 +194,7 @@ gg <- ggplot()+
     color=algorithm),
     data=models[["change"]])+
   geom_text(aes(
-    1000, Inf,
+    1200, Inf,
     color=algorithm,
     hjust=ifelse(algorithm=="binseg", 0, 1),
     label=sprintf("%s loss=%.2f", algorithm, loss)),
@@ -362,7 +363,6 @@ show.segs <- segs.dt[segments==max.segments]
 show.changes <- show.segs[1 < start]
 show.changes[, change.i := .I]
 show.segs[, seg.i := .I]
-model.color <- "blue"
 text.size <- 5
 theme.big <- theme(text=element_text(size=20))
 ggplot()+
@@ -482,6 +482,39 @@ gg <- ggplot()+
     x,y),
     data=data.table(panel=pfac("candidate loss"), x=270, y=-3))+
   facet_grid(panel ~ ., scales="free")
+
+best.segs.list <- split(
+  loss.dt[, .(start=1, end=N, mean)],
+  paste(1, loss.dt[["N"]]))
+loss.list <- list()
+for(n.segs in 2:max.segments){
+  for(up.to in n.segs:N.data){
+    last.start <- n.segs:up.to
+    prev.end <- last.start-1
+    last.dt <- getLoss(cum.mat[,up.to] - cum.mat[,prev.end])
+    loss.choices <- data.table(
+      prev.end,
+      last_mean=last.dt[["mean"]],
+      prev_loss=loss.mat[prev.end,n.segs-1],
+      last_loss=last.dt[["loss"]])
+    loss.choices[, total_loss := prev_loss + last_loss ]
+    loss.list[[paste(n.segs, up.to)]] <- loss.choices
+    best.choice <- loss.choices[which.min(total_loss)]
+    prev.segs <- best.segs.list[[
+      paste(n.segs-1, best.choice[["prev.end"]])
+      ]]
+    last.seg <- best.choice[, .(
+      start=prev.end+1, end=up.to, mean=last_mean)]
+    best.segs.list[[paste(n.segs, up.to)]] <- rbind(
+      prev.segs, last.seg)
+    loss.mat[up.to,n.segs] <- best.choice[["total_loss"]]
+  }
+}
+loss.tiles <- data.table(
+  data.i=as.integer(row(loss.mat)),
+  segments=as.integer(col(loss.mat)),
+  loss=as.numeric(loss.mat))
+loss.tiles[loss<0, loss := 0]
 scale.fill.loss <- scale_fill_gradient(
   "optimal\nloss",
   low="white", high=model.color,
@@ -530,39 +563,6 @@ $$
       size=1,
       color=model.color)
 }
-best.segs.list <- split(
-  loss.dt[, .(start=1, end=N, mean)],
-  paste(1, loss.dt[["N"]]))
-loss.list <- list()
-for(n.segs in 2:max.segments){
-  for(up.to in n.segs:N.data){
-    last.start <- n.segs:up.to
-    prev.end <- last.start-1
-    last.dt <- getLoss(cum.mat[,up.to] - cum.mat[,prev.end])
-    loss.choices <- data.table(
-      prev.end,
-      last_mean=last.dt[["mean"]],
-      prev_loss=loss.mat[prev.end,n.segs-1],
-      last_loss=last.dt[["loss"]])
-    loss.choices[, total_loss := prev_loss + last_loss ]
-    loss.list[[paste(n.segs, up.to)]] <- loss.choices
-    best.choice <- loss.choices[which.min(total_loss)]
-    prev.segs <- best.segs.list[[
-      paste(n.segs-1, best.choice[["prev.end"]])
-      ]]
-    last.seg <- best.choice[, .(
-      start=prev.end+1, end=up.to, mean=last_mean)]
-    best.segs.list[[paste(n.segs, up.to)]] <- rbind(
-      prev.segs, last.seg)
-    loss.mat[up.to,n.segs] <- best.choice[["total_loss"]]
-  }
-}
-loss.tiles <- data.table(
-  data.i=as.integer(row(loss.mat)),
-  segments=as.integer(col(loss.mat)),
-  loss=as.numeric(loss.mat))
-loss.tiles[loss<0, loss := 0]
-
 showChoice <- function(up.to, n.segs, choice){
   some.tiles <- data.table(loss.tiles)
   some.tiles[(segments==n.segs & data.i>up.to) | segments>n.segs, loss := NA]
@@ -653,7 +653,7 @@ $$
       value,
       color=type,
       label=sprintf(
-        "$t^*=%d$",
+        "optimal $t^*=%d$",
         prev.end)),
       vjust=0.5, hjust=1,
       label.size=0,
@@ -720,24 +720,24 @@ loss1(nrow(one.dt))
 
 The best square loss up to $t$ is
 $$
-c_{(0, t]} = \min_u \sum_{i=1}^t (u - z_i)^2 =
-t\hat u_t^2 - 2\hat u_t\sum_{i=1}^t z_i + \sum_{i=1}^t z_i^2.
+c_{(0, t]} = \min_u \sum_{i=1}^t (z_i-u)^2 =
+\sum_{i=1}^t z_i^2 - \min_u 2\hat u\sum_{i=1}^t z_i + t\hat u^2.
 $$
 
 We can use cumulative sum to compute $S_t$ for all $t$ in linear
 $O(t)$ time,
 $S_t = \sum_{i=1}^t z_i.$
 
-As can all best means up to $t$,
+And best means up to $t$,
 $\hat u_t = S_t / t.$
 
-As can cumulative sum of squares,
+And cumulative sum of squares,
 $Q_t = \sum_{i=1}^t z_i^2.$
 
-All best loss values up to $t$ can also be computed in linear time,
+And best loss up to $t$,
 $$ 
-t\hat u_t^2 - 2\hat u_t\sum_{i=1}^t z_i + \sum_{i=1}^t z_i^2 =
-t (S_t/t)^2 - 2(S_t/t)(S_t) + Q_t = 
+\sum_{i=1}^t z_i^2 - 2\hat u_t\sum_{i=1}^t z_i + t\hat u_t^2 =
+Q_t - 2(S_t/t)(S_t) + t (S_t/t)^2 = 
 Q_t-S_t^2/t.
 $$
 
@@ -823,47 +823,6 @@ BinSeg stores $O(S)$ split candidates (worst case).
 
 ---
 
-# Other optimal algorithms
-
-So far we have only discussed the *constrained problem*:
-hyper-parameter is number of segments $S\in\{1,\dots,n\}$.
-
-An alternative formulation involves specifying a non-negative penalty
-hyper-parameter, $\lambda\in\mathbb R^+$, and then solving the
-*penalized problem*:
-
-$$
-\min_{m_1,\dots,m_n\in\mathbb R}
-\underbrace{
-\sum_{i=1}^n
-\ell(m_i, z_i)
-}_{
-\text{loss}
-}
-+
-\lambda
-\underbrace{
-\sum_{i=1}^{n-1}
-I[m_i \neq m_{i+1}].
-}_{
-\text{number of changes}
-}
-$$
-
-The resulting model is the solution to a constrained problem (for some
-number of segments $S$). 
-
-Dynamic programming can also be used to solve this problem, using
-$O(n)$ space, best case $O(n)$ time (PELT algorithm), worst case
-$O(n^2)$ time. Optimal Detection of Changepoints With a Linear
-Computational Cost Killick R, Fearnhead P and Eckley IA. Journal of
-the American Statistical Association (2012).
-
-For large model sizes $S$ the penalized problem is much faster to
-solve than the constrained problem.
-
----
-
 # Second iteration/changepoint of dynamic programming
 
 ```{r, dev='tikz', results="asis"}
@@ -939,6 +898,47 @@ Dynamic programming is $O(n^2 S)$ for $S$ segments and $n$ data,
 whereas binary segmentation is $O(n \log S)$ best case and $O(n S)$
 worst case. (optimal algorithms are typically slower than
 approximate/heuristic algorithms)
+
+---
+
+# Other optimal algorithms
+
+So far we have only discussed the *constrained problem*:
+hyper-parameter is number of segments $S\in\{1,\dots,n\}$.
+
+An alternative formulation involves specifying a non-negative penalty
+hyper-parameter, $\lambda\in\mathbb R^+$, and then solving the
+*penalized problem*:
+
+$$
+\min_{m_1,\dots,m_n\in\mathbb R}
+\underbrace{
+\sum_{i=1}^n
+\ell(m_i, z_i)
+}_{
+\text{loss}
+}
++
+\lambda
+\underbrace{
+\sum_{i=1}^{n-1}
+I[m_i \neq m_{i+1}].
+}_{
+\text{number of changes}
+}
+$$
+
+The resulting model is the solution to a constrained problem (for some
+number of segments $S$). 
+
+Dynamic programming can also be used to solve this problem, using
+$O(n)$ space, best case $O(n)$ time (PELT algorithm), worst case
+$O(n^2)$ time. Optimal Detection of Changepoints With a Linear
+Computational Cost Killick R, Fearnhead P and Eckley IA. Journal of
+the American Statistical Association (2012).
+
+For large model sizes $S$ the penalized problem is much faster to
+solve than the constrained problem.
 
 ---
 

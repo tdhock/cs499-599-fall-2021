@@ -722,6 +722,33 @@ plot.iteration()
 
 ---
 
+# Detailed complexity analysis
+
+- Let $n=2^J$ for some $J\in\{1,2,\dots\}$, for example $J=6
+  \Rightarrow n=64$.
+- For any $j\in\{1,\dots,J+1\}$ if we do $I=2^{j-1}$ iterations
+  then how many split cost values to compute?
+- Best case: $nj -2^j + 1 = n(1+\log_2 I) -I/2 +1 \Rightarrow O(n \log I)$.
+- Worst case: $nI - I(1+I)/2 \Rightarrow O(nI)$.
+ 
+```{=latex}
+\small
+\begin{tabular}{cccccc}
+$j$ & $I$ & best & total & worst & total \\
+\hline
+1 & 1 & $n-1=63$  & $n-1=63$    & $n-1=63$ & $n-1=63$ \\
+2 & 2 & $n-2=62$  & $2n-3=125$  & $n-2=62$ & $2n-3=125$ \\
+  & 3 & $n/2-2=30$&             & $n-3=61$ & $3n-6=186$ \\
+3 & 4 & $n/2-2=30$& $3n-7=185$  & $n-4=60$ & $4n-10=246$ \\
+$\vdots$ &     $\vdots$ &     $\vdots$  & $\vdots$ & $\vdots$ & $\vdots$\\
+4 & 8 & $n/4-2=14$& $4n-15=241$ & $n-8=56$ & $8n-36=476$ \\
+$\vdots$ &     $\vdots$ &     $\vdots$  & $\vdots$ & $\vdots$ & $\vdots$ \\
+7 & 64 & $n/32-2=0$&$7n-128=321$ & $n-64=0$ & $64n-2080=2016$ \\
+\end{tabular}
+```
+
+---
+
 # Real data time complexity analysis
 
 ```{r, fig.height=4}
@@ -762,6 +789,11 @@ segs.dt.list <- list()
 for(data.name in names(data.list)){
   bad.data.vec <- data.list[[data.name]]
   fit <- binsegRcpp::binseg_normal(bad.data.vec)
+  s <- function(x)ifelse(x==1, 0, 1)
+  new.segs <- fit[, s(after.size)+s(before.size)]
+  map.size.after.erase <- cumsum(c(1, new.segs[-1]-1))
+  ## print(data.name)
+  ## print(map.size.after.erase)
   coef.dt <- coef(fit, 2:5)
   coef.dt[, panel := segments]
   segs.dt.list[[data.name]] <- data.table(
@@ -779,6 +811,7 @@ for(data.name in names(data.list)){
     data=bad.data.vec,
     fit)
 }
+
 (fit.dt <- do.call(rbind, fit.dt.list))
 (data.dt <- do.call(rbind, data.dt.list))
 (segs.dt <- do.call(rbind, segs.dt.list))
@@ -826,11 +859,6 @@ showCase <- function(show.name){
     geom_point(aes(
       segments, splits, color=case),
       data=show.splits[grepl("empirical", case)])+
-    ## directlabels::geom_dl(aes(
-    ##   segments, splits, color=case, label=label),
-    ##   method="smart.grid",
-    ##   ##debug=TRUE,
-    ##   data=show.dl)+
     geom_text(aes(
       N.data, y, label=sprintf(
         "%s case total splits=%d",
@@ -878,6 +906,37 @@ showCase("sin")
 
 ```{r, fig.height=4}
 showCase("linear")
+```
+
+---
+
+# Analysis of insert time and storage
+
+To store previously computed best loss/split for each segment, use a
+C++ Standard template library multimap, keyed by loss decrease. If
+multimap has $p$ items then insert takes $O(\log p)$ time. Below:
+inserts column shows $p$ for each insert, and size column shows $p$
+after inserts. Total
+$-\log(I-1) + \sum_{p=1}^{I-1} 2\log p\in O(I\log I)$
+time over all inserts, smaller than $O(n\log I)$ time for split computation.
+
+```{=latex}
+\small
+\begin{tabular}{ccccc}
+     & equal splits   &      & unequal splits &  \\
+ iteration $I$ & inserts & size & inserts & size \\
+\hline
+ 1 & 0   & 1 & 0 & 1 \\
+ 2 & 0,1 & 2 & 0 & 1 \\ 
+ 3 & 1,2 & 3 & 0 & 1 \\
+$\vdots$ &     $\vdots$ &     $\vdots$  & $\vdots$ & $\vdots$ \\
+32 & 30,31 & 32 & 0 & 1 \\
+33 &       & 31 & 0 & 1 \\
+34 &       & 30 & 0 & 1 \\
+$\vdots$ &     $\vdots$ &     $\vdots$  & $\vdots$ & $\vdots$ \\
+62 &       & 2 & 0 & 1 \\
+63 &       & 1 & 0 & 1
+\end{tabular}
 ```
 
 ---

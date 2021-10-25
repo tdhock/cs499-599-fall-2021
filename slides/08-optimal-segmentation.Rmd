@@ -19,7 +19,7 @@ knitr::opts_chunk$set(
 type.colors <- c(
   last="deepskyblue",
   prev="red",
-  total="black")
+  total=model.color)
 type.colors.mat <- col2rgb(type.colors)/255
 type.colors.list <- apply(type.colors.mat, 1, identity, simplify=FALSE)
 type.colors.hex <- do.call(rgb, type.colors.list)
@@ -46,13 +46,14 @@ data(neuroblastoma, package="neuroblastoma")
 nb.dt <- data.table(neuroblastoma[["profiles"]])
 setkey(nb.dt, profile.id, chromosome)
 one.dt <- nb.dt[J("4", "2")]
+one.dt[, data.i := .I]
 ggplot()+
   scale_x_continuous(
     "Position/index in data sequence")+
   scale_y_continuous(
     "logratio (approximate DNA copy number)")+
   geom_point(aes(
-    position, logratio),
+    data.i, logratio),
     data=one.dt)
 ```
 
@@ -75,7 +76,7 @@ ggplot()+
 
 # Example 1: stuck with sub-optimal change
   
-```{r}
+```{r fig.height=8}
 get_segs_loss <- function(pid, chrom, max.segments=6){
   one <- nb.dt[J(pid, chrom)]
   logratio <- one[["logratio"]]
@@ -110,13 +111,15 @@ get_segs_loss <- function(pid, chrom, max.segments=6){
 
 models <- get_segs_loss("565", "X")
 algo.sizes <- c(optimal=1.25, binseg=0.5)
+theme.mid <- theme(text=element_text(size=18))
 gg <- ggplot()+
+  theme.mid+
   geom_text(aes(
     1000, Inf,
     color=algorithm,
     hjust=ifelse(algorithm=="binseg", 0, 1),
     label=sprintf("%s loss=%.2f", algorithm, loss)),
-    vjust=1,
+    vjust=1.1,
     data=models[["loss"]])+
   geom_point(aes(
     data.i, logratio),
@@ -146,7 +149,7 @@ gg
 
 # Zoom to start
 
-```{r}
+```{r fig.height=8}
 gg+coord_cartesian(xlim=c(0, 200))
 ```
 
@@ -154,7 +157,7 @@ gg+coord_cartesian(xlim=c(0, 200))
 
 # Zoom to center
 
-```{r}
+```{r fig.height=8}
 gg+coord_cartesian(xlim=c(2100, 2300))
 ```
 
@@ -162,7 +165,7 @@ gg+coord_cartesian(xlim=c(2100, 2300))
 
 # Zoom to end
 
-```{r}
+```{r fig.height=8}
 gg+coord_cartesian(xlim=c(3700, 3800))
 ```
 
@@ -170,9 +173,10 @@ gg+coord_cartesian(xlim=c(3700, 3800))
 
 # Example 2: missing a small change down
 
-```{r}
+```{r fig.height=8}
 models <- get_segs_loss("229", "X")
 gg <- ggplot()+
+  theme.mid+
   geom_point(aes(
     data.i, logratio),
     shape=1,
@@ -193,7 +197,7 @@ gg <- ggplot()+
     color=algorithm,
     hjust=ifelse(algorithm=="binseg", 0, 1),
     label=sprintf("%s loss=%.2f", algorithm, loss)),
-    vjust=1,
+    vjust=1.1,
     data=models[["loss"]])+
   scale_size_manual(values=algo.sizes)+
   scale_x_continuous(
@@ -208,7 +212,7 @@ gg
 
 # Zoom to start
 
-```{r}
+```{r fig.height=8}
 gg+coord_cartesian(xlim=c(0, 200))
 ```
 
@@ -216,7 +220,7 @@ gg+coord_cartesian(xlim=c(0, 200))
 
 # Zoom to center
 
-```{r}
+```{r fig.height=8}
 gg+coord_cartesian(xlim=c(2000, 2500))
 ```
 
@@ -224,7 +228,7 @@ gg+coord_cartesian(xlim=c(2000, 2500))
 
 # Zoom to end
 
-```{r}
+```{r fig.height=8}
 gg+coord_cartesian(xlim=c(3700, 3800))
 ```
 
@@ -232,9 +236,10 @@ gg+coord_cartesian(xlim=c(3700, 3800))
 
 # Example 3: difficult to detect an outlier
 
-```{r}
+```{r fig.height=8}
 models <- get_segs_loss("590", "1")
 gg <- ggplot()+
+  theme.mid+
   geom_point(aes(
     data.i, logratio),
     shape=1,
@@ -255,7 +260,7 @@ gg <- ggplot()+
     color=algorithm,
     hjust=ifelse(algorithm=="binseg", 0, 1),
     label=sprintf("%s loss=%.2f", algorithm, loss)),
-    vjust=1,
+    vjust=1.1,
     data=models[["loss"]])+
   scale_size_manual(values=algo.sizes)+
   scale_x_continuous(
@@ -270,7 +275,7 @@ gg
 
 # Zoom X axis to outlier
 
-```{r}
+```{r fig.height=8}
 gg+coord_cartesian(xlim=c(5000, 5100))
 ```
 
@@ -278,15 +283,16 @@ gg+coord_cartesian(xlim=c(5000, 5100))
 
 # Example 4: stuck with sub-optimal change 
 
-```{r}
+```{r fig.height=8}
 models <- get_segs_loss("2", "2", 4)
 gg <- ggplot()+
+  theme.mid+
   geom_text(aes(
     200, Inf,
     color=algorithm,
     hjust=ifelse(algorithm=="binseg", 0, 1),
     label=sprintf("%s loss=%.2f", algorithm, loss)),
-    vjust=1,
+    vjust=1.1,
     data=models[["loss"]])+
   geom_point(aes(
     data.i, logratio),
@@ -316,7 +322,7 @@ gg
 
 # Zoom to changepoint
 
-```{r}
+```{r fig.height=8}
 gg+coord_cartesian(xlim=c(50, 100))
 ```
 
@@ -334,7 +340,7 @@ gg+coord_cartesian(xlim=c(50, 100))
     data point $i\in(t_{s-1},t_s]$ implies square loss function
     $\ell(u_s, z_i)=(u_s-z_i)^2$ to minimize.
 
-```{r plotcos, dev='tikz', fig.height=4}
+```{r dev='tikz', fig.height=4}
 max.segments <- 4
 logratio <- one.dt[["logratio"]]
 opt <- jointseg::Fpsn(logratio, max.segments)
@@ -456,6 +462,7 @@ getLoss <- function(mat){
 }
 loss.dt <- getLoss(cum.mat)
 loss.mat[,1] <- loss.dt[["loss"]]
+pfac <- function(x)factor(x, c("data values", "candidate loss", "segments"))
 gg <- ggplot()+
   theme.big+
   scale_x_continuous(
@@ -465,20 +472,26 @@ gg <- ggplot()+
   geom_point(aes(
     data.i, logratio),
     shape=1,
-    data=data.table(panel="data", one.dt))+
+    data=data.table(panel=pfac("data values"), one.dt))+
   geom_point(aes(
     N+0.5, loss),
     shape=1,
     color=model.color,
-    data=data.table(panel="loss", loss.dt))+
-  geom_blank(aes(x,y), data=data.table(panel="loss", x=270, y=-3))+
+    data=data.table(panel=pfac("candidate loss"), loss.dt))+
+  geom_blank(aes(
+    x,y),
+    data=data.table(panel=pfac("candidate loss"), x=270, y=-3))+
   facet_grid(panel ~ ., scales="free")
+scale.fill.loss <- scale_fill_gradient(
+  "optimal\nloss",
+  low="white", high=model.color,
+  guide=guide_colorbar(order=2),
+  limits=range(loss.tiles$loss, na.rm=TRUE))
 loss1 <- function(end){
   seg.dt <- loss.dt[end]
-  
   cat("
 $$
-\\mathcal L_{1,t}= c_{(0, t]}
+{ \\color{total} \\mathcal L_{1,t}= c_{(0, t]} }
 $$
 ")
   some.tiles <- data.table(loss.tiles)
@@ -492,15 +505,13 @@ $$
     geom_raster(aes(
       data.i+0.5, segments,
       fill=loss),
-      data=data.table(some.tiles, panel="matrix"))+
+      data=data.table(some.tiles, panel=pfac("segments")))+
     geom_tile(aes(
       data.i+0.5, segments),
       color="black",
       fill="transparent",
-      data=data.table(loss.tiles, panel="matrix"))+
-    scale_fill_gradient(
-      low="white", high="red", 
-      limits=range(loss.tiles$loss, na.rm=TRUE))+
+      data=data.table(loss.tiles, panel=pfac("segments")))+
+    scale.fill.loss+
     geom_text(aes(
       end+0.5,
       loss,
@@ -511,11 +522,11 @@ $$
       hjust=0,
       vjust=1.3,
       size=text.size,
-      data=data.table(panel="loss", seg.dt))+
+      data=data.table(panel=pfac("candidate loss"), seg.dt))+
     geom_segment(aes(
       0.5, mean,
       xend=end+0.5, yend=mean),
-      data=data.table(panel="data", seg.dt),
+      data=data.table(panel=pfac("data values"), seg.dt),
       size=1,
       color=model.color)
 }
@@ -557,7 +568,7 @@ showChoice <- function(up.to, n.segs, choice){
   some.tiles[(segments==n.segs & data.i>up.to) | segments>n.segs, loss := NA]
   cat(sprintf("
 $$
-\\mathcal L_{%d,t}= \\min_{t'<t}
+{ \\color{total} \\mathcal L_{%d,t} }= \\min_{t'<t}
 { \\color{prev} \\mathcal L_{%d,t'} }
  +
 { \\color{last} c_{(t', t]} }
@@ -581,7 +592,12 @@ $$
   loss.min <- loss.tall[type=="total"][which.min(value)]
   gg <- ggplot()+
     theme.big+
-    scale_color_manual(values=type.colors)+
+    scale_color_manual(
+      "loss type",
+      values=type.colors,
+      guide=guide_legend(order=1),
+      )+
+    scale.fill.loss+
     scale_x_continuous(
       "Position/index in data sequence")+
     scale_y_continuous(
@@ -589,17 +605,17 @@ $$
     geom_point(aes(
       data.i, logratio),
       shape=1,
-      data=data.table(panel="data", one.dt))+
+      data=data.table(panel=pfac("data values"), one.dt))+
     geom_point(aes(
       prev.end+0.5, value, color=type),
       shape=1,
-      data=data.table(panel="loss", loss.tall))+
+      data=data.table(panel=pfac("candidate loss"), loss.tall))+
     geom_segment(aes(
       start-0.5, mean,
       xend=end+0.5, yend=mean,
       color=type),
       size=2,
-      data=data.table(panel="data", show.segs))+
+      data=data.table(panel=pfac("data values"), show.segs))+
     geom_vline(aes(
       xintercept=prev.end+0.5, 
       color=type),
@@ -610,30 +626,28 @@ $$
     geom_raster(aes(
       data.i, segments,
       fill=loss),
-      data=data.table(some.tiles, panel="matrix"))+
+      data=data.table(some.tiles, panel=pfac("segments")))+
     geom_tile(aes(
       data.i, segments),
       color="black",
       fill="transparent",
-      data=data.table(loss.tiles, panel="matrix"))+
-    scale_fill_gradient(
-      low="white", high="red",
-      limits=range(loss.tiles$loss, na.rm=TRUE))+
+      data=data.table(loss.tiles, panel=pfac("segments")))+
     geom_text(aes(
       data.i, Inf,
       hjust=ifelse(data.i<N.data/2, 0, 1),
       label=sprintf("$t=%d$", data.i)),
       size=text.size,
-      vjust=1,
-      data=data.table(data.i=up.to, panel="data"))+
+      vjust=1.1,
+      data=data.table(data.i=up.to, panel=pfac("data values")))+
     geom_text(aes(
       prev.end+0.5, -Inf,
       color=type,
       label=sprintf("$t'=%d$", prev.end)),
       size=text.size,
       hjust=0,
-      vjust=0,
-      data=data.table(chosen.loss, type="total", panel="data"))+
+      vjust=-0.1,
+      data=data.table(
+        chosen.loss, type="total", panel=pfac("data values")))+
     geom_label(aes(
       prev.end+0.5,
       value,
@@ -645,7 +659,7 @@ $$
       label.size=0,
       alpha=0.5,
       size=text.size,
-      data=data.table(panel="loss", loss.min))+
+      data=data.table(panel=pfac("candidate loss"), loss.min))+
     geom_label(aes(
       prev.end+0.5,
       value,
@@ -657,12 +671,12 @@ $$
       label.size=0,
       alpha=0.5,
       size=text.size,
-      data=data.table(panel="loss", loss.min))+
+      data=data.table(panel=pfac("candidate loss"), loss.min))+
     geom_point(aes(
       prev.end+0.5,
       value,
       color=type),
-      data=data.table(panel="loss", loss.min))+
+      data=data.table(panel=pfac("candidate loss"), loss.min))+
     facet_grid(panel ~ ., scales="free")
   gg
 }
@@ -681,7 +695,7 @@ loss1(1)
 # Initialization of dynamic programming
 
 ```{r, dev='tikz', results="asis"}
-loss1(10)
+loss1(41)
 ```
 
 --- 
@@ -732,7 +746,7 @@ $$
 # First iteration/changepoint of dynamic programming
 
 ```{r, dev='tikz', results="asis"}
-showChoice(30, 2, 10)
+showChoice(113, 2, 10)
 ```
 
 ---
@@ -740,7 +754,7 @@ showChoice(30, 2, 10)
 # First iteration/changepoint of dynamic programming
 
 ```{r, dev='tikz', results="asis"}
-showChoice(30, 2, 16)
+showChoice(113, 2, 41)
 ```
 
 ---
@@ -748,31 +762,7 @@ showChoice(30, 2, 16)
 # First iteration/changepoint of dynamic programming
 
 ```{r, dev='tikz', results="asis"}
-showChoice(30, 2, 25)
-```
-
----
-
-# First iteration/changepoint of dynamic programming
-
-```{r, dev='tikz', results="asis"}
-showChoice(100, 2, 10)
-```
-
----
-
-# First iteration/changepoint of dynamic programming
-
-```{r, dev='tikz', results="asis"}
-showChoice(100, 2, 41)
-```
-
----
-
-# First iteration/changepoint of dynamic programming
-
-```{r, dev='tikz', results="asis"}
-showChoice(100, 2, 80)
+showChoice(113, 2, 80)
 ```
 
 ---
@@ -809,45 +799,75 @@ showChoice(234, 2, 150)
 
 ---
 
-# Time complexity analysis
+# Time complexity for $S$ segments and $n$ data
 
 ```{=latex}
 \begin{tabular}{ccccc}
 changes & naive & DP(classic) & DP(pruned) & BinSeg \\
 \hline
-1 & $O(n)$   & $O(n)$   & $O(n\log n)$--$O(n^2)$ & $O(n)$ \\
-2 & $O(n^2)$ & $O(n^2)$ & $O(n\log n)$--$O(n^2)$ & $O(\log n)$--$O(n)$\\
-3 & $O(n^3)$ & $O(n^2)$ & $O(n\log n)$--$O(n^2)$ & $O(\log n)$--$O(n)$\\
-4 & $O(n^4)$ & $O(n^2)$ & $O(n\log n)$--$O(n^2)$ & $O(\log n)$--$O(n)$\\
+1 & $O(n)$   & $O(n)$   & $O(n)$--$O(n^2)$ & $O(n)$ \\
+2 & $O(n^2)$ & $O(n^2)$ & $O(n)$--$O(n^2)$ & $O(\log n)$--$O(n)$\\
+3 & $O(n^3)$ & $O(n^2)$ & $O(n)$--$O(n^2)$ & $O(\log n)$--$O(n)$\\
+4 & $O(n^4)$ & $O(n^2)$ & $O(n)$--$O(n^2)$ & $O(\log n)$--$O(n)$\\
 $\vdots$ &     $\vdots$ &     $\vdots$  & $\vdots$ 
 \end{tabular}
 ```
-
-For example we have $\log n = `r log(N.data)`$, $n = `r N.data`$,
-$n \log n = `r N.data*log(N.data)`$,
-$n^2 = `r N.data^2`$ and $n^3 = `r N.data^3`$.
 
 Dynamic programming with either functional or inequality pruning leads
 to asymptotic speedups, see Maidstone R, Hocking TD, Rigaill G,
 Fearnhead P. On optimal multiple changepoint algorithms for large
 data. Statistics and Computing (2016).
 
+Space: DP stores $O(n S)$ loss $\mathcal L_{s,t}$ values (always),
+BinSeg stores $O(S)$ split candidates (worst case).
+
 ---
 
-# Space complexity analysis
+# Other optimal algorithms
 
-For computing best model in $S$ segments and $n$ data,
+So far we have only discussed the *constrained problem*:
+hyper-parameter is number of segments $S\in\{1,\dots,n\}$.
 
-- Dynamic programming: $O(n S)$ loss $\mathcal L_{s,t}$ values to
-  store.
-- Binary segmentation: $O(S)$ split candidates to store.
+An alternative formulation involves specifying a non-negative penalty
+hyper-parameter, $\lambda\in\mathbb R^+$, and then solving the
+*penalized problem*:
+
+$$
+\min_{m_1,\dots,m_n\in\mathbb R}
+\underbrace{
+\sum_{i=1}^n
+\ell(m_i, z_i)
+}_{
+\text{loss}
+}
++
+\lambda
+\underbrace{
+\sum_{i=1}^{n-1}
+I[m_i \neq m_{i+1}].
+}_{
+\text{number of changes}
+}
+$$
+
+The resulting model is the solution to a constrained problem (for some
+number of segments $S$). 
+
+Dynamic programming can also be used to solve this problem, using
+$O(n)$ space, best case $O(n)$ time (PELT algorithm), worst case
+$O(n^2)$ time. Optimal Detection of Changepoints With a Linear
+Computational Cost Killick R, Fearnhead P and Eckley IA. Journal of
+the American Statistical Association (2012).
+
+For large model sizes $S$ the penalized problem is much faster to
+solve than the constrained problem.
 
 ---
 
 # Second iteration/changepoint of dynamic programming
 
 ```{r, dev='tikz', results="asis"}
-showChoice(150, 3, 20)
+showChoice(157, 3, 20)
 ```
 
 ---
@@ -855,7 +875,7 @@ showChoice(150, 3, 20)
 # Second iteration/changepoint of dynamic programming
 
 ```{r, dev='tikz', results="asis"}
-showChoice(150, 3, 113)
+showChoice(157, 3, 113)
 ```
 
 ---
@@ -863,7 +883,7 @@ showChoice(150, 3, 113)
 # Second iteration/changepoint of dynamic programming
 
 ```{r, dev='tikz', results="asis"}
-showChoice(150, 3, 130)
+showChoice(157, 3, 130)
 ```
 
 ---

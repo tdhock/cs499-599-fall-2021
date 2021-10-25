@@ -1,0 +1,84 @@
+Segmentation model selection and evaluation
+
+The goals of this homework are to explore how classic information
+criteria and a subtrain/validation split can be used to select the
+segmentation model size parameter.
+
+1. For data sequence profile.id=79, chromosome=2 in the neuroblastoma
+   data, assign observations to 50% subtrain 50% validation sets. How
+   many observations are in each set? Hint: use table(set).
+
+2. Use binsegRcpp::binseg_normal to compute models from 1 to 10
+   segments on the subtrain data, then compute one data table with
+   predicted changepoint positions, and another data table with
+   segment start/end values (in terms of the full data
+   indices/positions, not just the subtrain set). Plot the
+   segments/changepoints on top of the data (use points with different
+   color/fill for different sets, black=subtrain, red=validation), and
+   use facet_grid(segments ~ .)  to draw each model size in a
+   different panel. After how many segments does the model appear to
+   overfit?
+
+3. Compute the square loss for each model size and set, and store
+   these numbers in a data table with columns segments,set,loss. Plot
+   the loss as a function of the number of segments, with different
+   sets in different colors (black=subtrain, red=validation). Based on
+   the loss values/plot, what is the number of segments you should
+   select?
+
+4. Using the full data set (no subtrain/validation split), compute
+   model selection criteria = loss + penalty*segments, for penalty=2
+   (AIC) and penalty=log(N.data) (BIC). Save these numbers in a single
+   data table with columns segments, crit.name(AIC/BIC),
+   crit.value(numeric value defined in equation above). Then plot them
+   using different colors for different penalties (e.g., AIC=blue,
+   BIC=orange). Do the two criteria select the same number of
+   segments?
+
+** CS599 graduate students only
+
+The goal is to compare segmentation models in terms of label error
+rates and ROC curves. First run binsegRcpp::binseg_normal on ALL labeled
+neuroblastoma data sequences, then compare two model selection criteria
+(AIC/BIC) in terms of label error rates and ROC curves.
+- You should have a for loop over rows of the data table of labels
+  (neuroblastoma$annotations), since there is only one label/row per
+  data sequence.
+- For each sequence (unique value of profile.id, chromosome) you
+  should run binary segmentation up to 20 segments. Use
+  penaltyLearning::modelSelection to compute a data table representing
+  the model selection function (which maps penalty values to model
+  sizes). Then use the model selection data table as input to
+  penaltyLearning::labelError, which computes the number of
+  incorrectly predicted labels as a function of the
+  penalty/lambda. Also compute a data table of predicted penalty
+  values for AIC/BIC with two rows and columns
+  sequenceID,crit.name,pred.log.lambda. Hint: for reference/example
+  see https://rcdata.nau.edu/genomic-ml/public_html/change-tutorial/Supervised.html
+- After your for loop is done, combine the results into two data
+  tables (label errors and predicted penalties). Use
+  penaltyLearning::ROChange to compute a ROC curve for each model
+  (AIC/BIC). Plot the ROC curves, using a different color for each
+  model (e.g., AIC=blue, BIC=orange). Which model has a larger area
+  under the curve?
+- Also inspect the thresholds element of the ROChange result in order
+  to see the number of label errors per model. Which model has a
+  smaller number of predicted label errors?
+
+EXTRA CREDIT 20 points: do the same analysis with model selected via
+50/50 cross-validation (in addition to the two models AIC/BIC
+described above). Is it more/less accurate than AIC/BIC?
+
+FAQ: what is train and subtrain sets?
+
+we split full data into train/test sets.
+
+Then we split the train data into subtrain/validation sets.
+
+purpose of each set:
+- test: not used at all to learn model parameters, instead just used
+  at the end, after all parameters have been learned, to evaluate
+  prediction error/accuracy.
+- validation: used to learn hyper-parameters. (e.g., states/segments)
+- subtrain: used to learn regular model parameters (e.g.,
+  changepoints/segment means), given a fixed set of hyper-parameters.

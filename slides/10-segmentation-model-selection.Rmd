@@ -1,0 +1,241 @@
+---
+title: "Segmentation model selection and evaluation"
+author: "Toby Dylan Hocking"
+output: beamer_presentation
+---
+
+```{r opts, echo=FALSE}
+knitr::opts_chunk$set(
+  echo=FALSE, results=FALSE,
+  fig.width=10,
+  fig.height=7)
+```
+
+# Background: detecting abrupt changes is important 
+
+Example from cancer diagnosis: breakpoints are associated with
+aggressive disease in neuroblastoma.
+
+```{r}
+suppressPackageStartupMessages({
+  library(data.table)
+  library(ggplot2)
+})
+set.colors <- c(subtrain="black", validation="red")
+theme_set(
+  theme_bw()+
+    theme(
+      panel.spacing=grid::unit(0, "lines"),
+      text=element_text(size=20)))
+geom.text.size <- 5
+data(neuroblastoma, package="neuroblastoma")
+nb.dt <- data.table(neuroblastoma[["profiles"]])
+nb.dt[, data.i := rank(position), keyby=.(profile.id, chromosome)]
+nb.dt[, pid.chr := paste0(profile.id, ".", chromosome)]
+setkey(nb.dt, pid.chr)
+
+max.segments <- 10
+data.dt.list <- list()
+model.dt.list <- list()
+cv.dt.list <- list()
+for(id in c("4.2", "4.11")){
+  chrom.dt <- nb.dt[id]
+  chrom.dt[, set := rep(rep(c("subtrain", "validation"), each=5), l=.N)]
+  binseg.model <- binsegRcpp::binseg_normal(
+    chrom.dt[["logratio"]], max.segments)
+  model.dt.list[[id]] <- binseg.model
+  data.dt.list[[id]] <- chrom.dt
+  first.pos <- chrom.dt[1, position]
+  last.pos <- chrom.dt[.N, position]
+  subtrain.data <- chrom.dt[set=="subtrain"]
+  subtrain.data[, change.before := as.integer(
+    position-c(NA, diff(position)/2))]
+  subtrain.model <- binsegRcpp::binseg_normal(
+    subtrain.data[["logratio"]], max.segments)
+  subtrain.segs <- coef(subtrain.model)
+  segs.pos <- subtrain.segs[, {
+    change.i <- start[start>1]
+    change.pos <- subtrain.data$change.before[change.i]
+    data.table(
+      mean,
+      start.pos=c(first.pos, change.pos+1),
+      end.pos=c(change.pos, last.pos))
+  }, by=segments]
+  join.dt <- chrom.dt[
+    segs.pos,
+    .(segments, logratio, mean, set),
+    on=.(position >= start.pos, position <= end.pos)]
+  cv.dt.list[[id]] <- join.dt[, .(
+    n.data=.N,
+    error=sum((logratio-mean)^2)
+  ), by=.(segments, set)]
+}
+plotData <- function(id){
+  ggplot()+
+    scale_x_continuous(
+      "Position/index in data sequence")+
+    scale_y_continuous(
+      "logratio (approximate DNA copy number)")+
+    geom_point(aes(
+      data.i, logratio),
+      data=data.dt.list[[id]])
+}
+plotData("4.2")
+```
+
+---
+
+# Motivation for segmentation model selection and evaluation
+
+- In each of the segmentation models we have studied, there is a
+  choice of model size (segments/changepoints or hidden states).
+- Too large model sizes result in false positives (changepoints
+  predicted by algorithm but they are not significant/real).
+- Too small model sizes result in false negatives (no changepoint
+  predicted where there should be).
+- Want to maximize true positive rate (number of correctly predicted
+  changepoints) and true negative rate (number of correct predicted
+  regions without changepoints).
+
+---
+
+# Model selection via Classic Information Criteria 
+
+For every model size $k\in\{1,\dots,K\}$ let $L_k$ be the loss.
+
+Information criteria choose the model which minimizes the penalized
+cost, for some non-negative penalty $\lambda\geq 0$,
+
+$$ C_k = \min_{
+k\in\{1,\dots,K\} 
+} L_k + \lambda k $$
+
+- BIC=Bayesian Information Criterion, sometimes referred to as
+  SIC=Schwarz who was the author. $\lambda=\log n$ where $n$ is the
+  number of data points.
+- AIC=Akaike Information Criterion: $\lambda=2$.
+- Data viz: http://bl.ocks.org/tdhock/raw/43ac9c6be9188dcb02a7/
+
+---
+
+# Model selection criteria plot for binary segmentation
+
+```{r}
+plotPenalties <- function(id){
+  loss <- model.dt.list[[id]][["loss"]]
+  n.data <- nrow(data.dt.list[[id]])
+  penalty.vec <- c(AIC=2, BIC=log(n.data))
+  penalty.dt.list <- list()
+  for(penalty.name in names(penalty.vec)){
+    penalty.value <- penalty.vec[[penalty.name]]
+    model.size <- 1:max.segments
+    cost <- loss + penalty.value * model.size
+    penalty.dt.list[[penalty.name]] <- data.table(
+      penalty.name,
+      segments=model.size,
+      cost)
+  }
+  penalty.dt <- do.call(rbind, penalty.dt.list)
+  gg <- ggplot()+
+    scale_color_manual(values=c(BIC="orange", AIC="blue"))+
+    geom_line(aes(
+      segments, cost, color=penalty.name),
+      data=penalty.dt)+
+    scale_x_continuous(
+      limits=c(1, max.segments+1),
+      breaks=seq(1, max.segments))
+  directlabels::direct.label(gg, list(cex=2, "right.polygons"))
+}
+plotPenalties("4.2")
+```
+
+---
+
+# Cross-validation for model selection
+
+```{r}
+plotDataCV <- function(id){
+  ggplot()+
+    scale_color_manual(values=set.colors)+
+    scale_x_continuous(
+      "Position/index in data sequence")+
+    scale_y_continuous(
+      "logratio (approximate DNA copy number)")+
+    geom_point(aes(
+      data.i, logratio, color=set),
+      data=data.dt.list[[id]])
+}
+plotDataCV("4.2")
+```
+
+---
+
+# Idea for cross-validation
+
+- Divide full data sequence into subtrain and validation sets.
+- Use subtrain data as input to learning algorithm.
+- Use validation data to choose best model size (min error or negative
+  log likelihood).
+- As model size increases, subtrain error should always decrease,
+  whereas validation error should be U shaped.
+
+---
+
+# CV Error plot
+
+```{r}
+plotErrorCV <- function(id){
+  ggplot()+
+    scale_color_manual(values=set.colors)+
+    geom_line(aes(
+      segments, error, color=set),
+      data=cv.dt.list[[id]])+
+    scale_x_continuous(breaks=seq(1, max.segments))
+}
+plotErrorCV("4.2")
+```
+
+---
+
+# Another data set
+
+```{r}
+plotData("4.11")
+```
+
+---
+
+# Model selection plot
+
+```{r}
+plotPenalties("4.11")
+```
+
+---
+
+# Cross-validation for model selection
+
+```{r}
+plotDataCV("4.11")
+```
+
+---
+
+# CV error plot
+
+```{r}
+plotErrorCV("4.11")
+```
+
+---
+
+# Labeled regions for evaluating accuracy of changepoint predictions
+
+TODO
+
+---
+
+# Possible exam questions
+
+TODO
+

@@ -49,14 +49,17 @@ penalty.dt.list <- list()
 selected.dt.list <- list()
 model.segs.list <- list()
 label.error.list <- list()
+subtrain.segs.list <- list()
 some.ids <- c(
   "4.2", "4.11",
   "2.3", "2.4", "2.11",
   pro.ann$pid.chr)
 for(id in some.ids){
   chrom.dt <- nb.dt[id]
-  sub.valid.runs <- rep(c("subtrain", "validation"), each=2)
+  sub.valid.runs <- rep(c("subtrain", "validation"), each=12)
   chrom.dt[, set := rep(sub.valid.runs, l=.N)]
+  set.seed(4)
+  chrom.dt[, set := sample(rep(c("subtrain", "validation"), l=.N))]
   binseg.model <- binsegRcpp::binseg_normal(
     chrom.dt[["logratio"]], max.segments)
   loss <- binseg.model[["loss"]]
@@ -94,6 +97,7 @@ for(id in some.ids){
       start.pos=c(first.pos, change.pos+1),
       end.pos=c(change.pos, last.pos))
   }, by=segments]
+  subtrain.segs.list[[id]] <- segs.pos
   join.dt <- chrom.dt[
     segs.pos,
     .(segments, logratio, mean, set),
@@ -106,7 +110,7 @@ for(id in some.ids){
     chrom.cv[set=="validation", .(algorithm="CV", segments, cost=error)],
     chrom.penalty[, .(algorithm=penalty.name, segments, cost)]
   )[, .SD[which.min(cost)], by=algorithm]
-  max.show <- 9
+  max.show <- 10
   bad <- chrom.selected[segments>max.show]
   if(nrow(bad)){
     print(bad)
@@ -232,10 +236,56 @@ plotDataCV("4.2")
 
 - Divide full data sequence into subtrain and validation sets.
 - Use subtrain data as input to learning algorithm.
+- Compute predicted changepoint positions and segment parameters using
+  only subtrain data.
+- Assign parameters to validation data based on predicted
+  changepoints.
 - Use validation data to choose best model size (min error or negative
   log likelihood).
 - As model size increases, subtrain error should always decrease,
   whereas validation error should be U shaped.
+
+---
+
+# Fitting model to validation set
+
+```{r}
+id <- "4.2"
+point.dt <- data.dt.list[[id]]
+segment.dt <- subtrain.segs.list[[id]]
+text.dt <- cv.dt.list[[id]]
+model.color <- "deepskyblue"
+ggplot()+
+  scale_color_manual(values=set.colors)+
+  scale_x_continuous(
+    "Position/index in data sequence")+
+  scale_y_continuous(
+    "logratio (approximate DNA copy number)")+
+  geom_point(aes(
+    position/1e6, logratio, color=set),
+    data=point.dt)+
+  geom_segment(aes(
+    start.pos/1e6, mean,
+    xend=end.pos/1e6, yend=mean),
+    color=model.color,
+    size=1,
+    data=segment.dt)+
+  geom_vline(aes(
+    xintercept=start.pos/1e6),
+    color=model.color,
+    data=segment.dt[start.pos>min(start.pos)])+
+  facet_grid(segments ~ .)+
+  geom_text(aes(
+    ifelse(set=="subtrain", -Inf, Inf),
+    -Inf,
+    color=set,
+    hjust=ifelse(set=="subtrain", 0, 1),
+    label=sprintf(
+      "%s error=%.2f",
+      set, error)),
+    vjust=-0.5,
+    data=text.dt)
+```
 
 ---
 
@@ -329,7 +379,6 @@ plotDataLabel("4.11")
 # False negative for missing change in positive label
 
 ```{r}
-model.color <- "deepskyblue"
 plotDataLabelModels <- function(id){
   seg.dt <- model.segs.list[[id]]
   change.dt <- seg.dt[start>1]
@@ -499,7 +548,10 @@ comparePenalties("11.4")
 
 # ROC curves for evaluation
 
-```{r}
+- Point shown is error rate of predicted penalty.
+- Add constants to that penalty to trace ROC curve.
+
+```{r, fig.height=7}
 auc.dt <- pen.dt[, {
   roc.list <- penaltyLearning::ROChange(nb.err, .SD, "pid.chr")
   with(roc.list, data.table(
@@ -541,10 +593,24 @@ ggplot()+
 
 ---
 
+# Other ROC curve data visualizations
+
+- http://ml.nau.edu/viz/2021-10-21-curveAlignment/
+- http://ml.nau.edu/viz/2021-10-21-neuroblastomaProcessed-complex/
+
+---
+
 # Possible exam questions
 
 - What is the difference between AIC and BIC? 
 - Does AIC or BIC tend to select larger model sizes? or do they select
   the same model size? why?
+- When using cross-validation for model selection, what set is used as
+  input to the learning algorithm? What set is not input to the
+  learning algorithm?
+- What modifications would be required to use K-fold cross-validation
+  instead of a single 50% subtrain, 50% validation split?
+- What modifications, if any, would be needed to use these model
+  selection algorithms with Hidden Markov Models?
 
 

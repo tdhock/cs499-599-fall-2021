@@ -1,0 +1,48 @@
+1. What input data and hyper-parameter(s) are required as input to the
+   binary segmentation algorithm? What does the algorithm output?
+
+2. Consider a sequential data set with N=100 data points. To compute
+   the binary segmentation model with 1/2/3 changepoints, what is the
+   number of splits for which the loss must be computed? (provide best
+   and worst case analysis)
+
+3. Consider a sequential data set with N=100 data points. To compute
+   the optimal segmentation model with S=4 segments we can use the
+   classic dynamic programming to recursively compute the best loss
+   values L_{s,t} in s segments and t data points. For each of the
+   following loss values, how many last changepoint variables are
+   considered?
+   - L_{2,50}
+   - L_{3,10}
+   - L_{4,100}
+
+4. Are the following statements true or false for each of the
+   segmentation/changepoint learning algorithms that we have studied?
+   - Guaranteed to compute the globally optimal model for some model
+     sizes.
+   - Guaranteed to compute the globally optimal model for all model
+     sizes.
+   - Guaranteed to compute the globally optimal model for no model
+     sizes.
+   - Learned model parameters depend on random initialization.
+   - Time complexity is linear in number of data.
+   - Time complexity is linear in model size.
+
+5. Assume you have a time series of with P=2 dimensions that you want
+   to segment using a Hidden Markov Model. Assume a multivariate
+   normal emission distribution with no constraints on the covariance
+   matrix. Also assume there are S=5 states, and a dense transition
+   matrix (no constraints). What are the model parameters, what are
+   their sizes/dimensions, and how many of each are there?
+
+Rubric: minus points for incomplete and/or off-topic responses.
+
+Volunteers to present solutions:
+- CS499: TODO
+- CS599: TODO
+
+For the real mid-term (in class at time shown below), what would be
+the analogous questions for the other topics that we have studied?
+- CS599 Thurs Nov 4 at 8:00AM-9:15AM.
+- CS499 Friday Nov 5 at 8:00AM-8:50AM.
+

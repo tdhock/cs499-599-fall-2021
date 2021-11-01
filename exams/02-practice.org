@@ -38,7 +38,7 @@
 Rubric: minus points for incomplete and/or off-topic responses.
 
 Volunteers to present solutions:
-- CS499: TODO
+- CS499: Georgia, Taylor, Brendan, Charlie, Austin.
 - CS599: TODO
 
 For the real mid-term (in class at time shown below), what would be
@@ -46,3 +46,5 @@ the analogous questions for the other topics that we have studied?
 - CS599 Thurs Nov 4 at 8:00AM-9:15AM.
 - CS499 Friday Nov 5 at 8:00AM-8:50AM.
 
+It will be open-note: during the real exam, you are allowed one sheet
+of paper, filled in with your own notes, in your own handwriting.

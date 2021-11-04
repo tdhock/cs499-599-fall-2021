@@ -752,7 +752,7 @@ $\vdots$ &     $\vdots$ &     $\vdots$  & $\vdots$ & $\vdots$ & $\vdots$ \\
 # Real data time complexity analysis
 
 ```{r, fig.height=4}
-N.exp <- 6
+N.exp <- 3
 N.data <- 2^N.exp
 N.exp.seq <- 1:N.exp
 (size.after.split <- as.integer(N.data/rep(2^N.exp.seq, 2^(N.exp.seq-1))))
@@ -788,6 +788,7 @@ data.dt.list <- list()
 segs.dt.list <- list()
 for(data.name in names(data.list)){
   bad.data.vec <- data.list[[data.name]]
+  print(data.name)
   fit <- binsegRcpp::binseg_normal(bad.data.vec)
   s <- function(x)ifelse(x==1, 0, 1)
   new.segs <- fit[, s(after.size)+s(before.size)]

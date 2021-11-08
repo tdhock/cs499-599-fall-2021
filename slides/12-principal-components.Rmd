@@ -1,0 +1,567 @@
+---
+title: "Principal Components Analysis"
+author: "Toby Dylan Hocking"
+output: beamer_presentation
+---
+
+```{r opts, echo=FALSE}
+knitr::opts_chunk$set(
+  echo=FALSE, results=FALSE,
+  fig.width=10,
+  fig.height=7)
+```
+
+# Background/motivation: dimensionality reduction
+
+- High dimensional data are difficult to visualize.
+- For example each observation/example in the zip data is of dimension
+  16 x 16 = 256 pixels.
+- We would like to map each observation into a lower-dimensional
+  space for visualization / understanding patterns in the data.
+  
+# Example 1: 2d iris data
+
+```{r}
+## 0. iris data scatterplot two columns with one principal component line
+##    and orthogonal projection segments.
+library(data.table)
+i.df <- iris[, 2:3]
+str(i.df)
+library(ggplot2)
+gg <- ggplot()+
+  geom_point(aes(
+    x=Petal.Length, y=Sepal.Width),
+    shape=1,
+    data=i.df)+
+  coord_equal()
+gg
+```
+
+---
+
+# Project 2d data onto 1d subspace (line)
+
+Why this line? 
+
+```{r}
+pc.fit <- prcomp(i.df)
+str(pc.fit)
+pc.fit[["rotation"]]
+lambda.vec <- seq(-3, 3, by=0.5)
+##lambda.vec <- pc.fit$x[,1] ## this is lambda from the book!
+line.dt.list <- list()
+PC1 <- pc.fit[["rotation"]][,1]
+PC2 <- pc.fit[["rotation"]][,2]
+f <- function(l)mean.vec + l * PC1
+mean.vec <- colMeans(i.df)
+for(lambda in lambda.vec){
+  line.vec <- f(lambda)
+  line.dt.list[[paste(lambda)]] <- data.table(lambda, t(line.vec))
+}
+line.dt <- do.call(rbind, line.dt.list)
+line.dt[, method := "grid"]
+##y= mx + b
+## Sepal.Width = slope * Petal.Length + intercept
+## What is the intercept? that is b where 
+## f(Petal.Length) = 0 = mean(Petal.Length) + lambda * PC1(Petal.Length)
+## f(Sepal.Width) = b = mean(Sepal.Width)  + lambda * PC1(Sepal.Width)
+## lambda = -mean(Sepal.Width) / PC1(Sepal.Width)
+lambda.intercept <- -mean.vec[["Petal.Length"]]/PC1[["Petal.Length"]]
+f(lambda.intercept)
+abline.dt <- data.table(
+  method="slope/intercept",
+  ## f(Petal.Length) =
+  ## mean(Petal.Length)
+  ## - mean(Sepal.Width)*PC1(Petal.Length)/PC1(Sepal.Width)
+  ## + f(Sepal.Width)*PC1(Petal.Length)/PC1(Sepal.Width)
+  intercept=mean.vec[["Sepal.Width"]] +
+    lambda.intercept*PC1[["Sepal.Width"]],
+  slope=PC1[["Sepal.Width"]]/PC1[["Petal.Length"]])
+## [f(Sepal.Width) - mean(Sepal.Width)]/PC1(Sepal.Width) = lambda
+## f(Petal.Length) = mean(Petal.Length) +
+## [(f(Sepal.Width)-mean(Sepal.Width))/PC1(Sepal.Width)] * PC1(Petal.Length)
+gg+
+  geom_abline(aes(
+    slope=slope,
+    intercept=intercept),
+    data=abline.dt)
+```
+
+---
+
+# Principal Components Projection
+
+The first principal component is the line which minimizes the
+reconstruction error, squared distance between projection and data.
+
+```{r}
+PC1.mat <- matrix(PC1, nrow=nrow(iris), ncol=2, byrow=TRUE)
+mean.vec <- colMeans(i.df)
+mean.mat <- matrix(mean.vec, nrow=nrow(iris), ncol=2, byrow=TRUE)
+pred.mat <- mean.mat + PC1.mat * pc.fit[["x"]][, 1] #lambda from book.
+colnames(pred.mat) <- colnames(i.df)
+both.dt <- rbind(
+  data.table(i.df, type="data", Species=iris$Species),
+  data.table(pred.mat, type="projection",Species=iris$Species))
+segs.dt <- data.table(data=i.df, pred=pred.mat)
+ggplot()+
+  coord_equal()+
+  geom_point(aes(
+    x=Petal.Length, y=Sepal.Width, fill=type),
+    shape=21,
+    size=2,
+    data=both.dt)+
+  geom_abline(aes(
+    slope=slope,
+    intercept=intercept),
+    data=abline.dt)+
+  geom_blank(aes(
+    Petal.Length, Sepal.Width),
+    data=line.dt)+
+  geom_segment(aes(
+    y=data.Sepal.Width,
+    yend=pred.Sepal.Width,
+    x=data.Petal.Length,
+    xend=pred.Petal.Length),
+    data=segs.dt)
+```
+
+---
+
+# Map label onto projection
+
+```{r}
+color.code <- c(
+  setosa="#1B9E77",
+  versicolor="#D95F02",
+  virginica="#7570B3",
+  "1"="#E7298A",
+  "2"="#66A61E",
+  "3"="#E6AB02", 
+  "4"="#A6761D")
+ggplot()+
+  coord_equal()+
+  scale_fill_manual(values=color.code)+
+  geom_segment(aes(
+    y=data.Sepal.Width,
+    yend=pred.Sepal.Width,
+    x=data.Petal.Length,
+    xend=pred.Petal.Length),
+    data=segs.dt)+
+  geom_blank(aes(
+    Petal.Length, Sepal.Width),
+    data=line.dt)+
+  geom_point(aes(
+    x=Petal.Length, y=Sepal.Width, fill=Species),
+    shape=21,
+    size=2,
+    data=both.dt)+
+  geom_abline(aes(
+    slope=slope,
+    intercept=intercept),
+    data=abline.dt)
+```
+
+---
+
+# Map label onto projection
+
+```{r}
+uniq.data <- unique(both.dt[type=="data", .(Petal.Length, Sepal.Width)])
+ggplot()+
+  coord_equal()+
+  scale_fill_manual(values=color.code)+
+  geom_point(aes(
+    x=Petal.Length, y=Sepal.Width, fill=Species),
+    shape=21,
+    size=2,
+    data=both.dt[type=="projection"])+
+  geom_point(aes(
+    x=Petal.Length, y=Sepal.Width),
+    alpha=0.3,
+    data=uniq.data)+
+  geom_blank(aes(
+    Petal.Length, Sepal.Width),
+    data=line.dt)+
+  geom_abline(aes(
+    slope=slope,
+    intercept=intercept),
+    data=abline.dt)
+```
+
+---
+
+# Principal component 1, amount along projection
+
+```{r, fig.height=5}
+ggplot()+
+  coord_equal()+
+  scale_fill_manual(values=color.code)+
+  ggforce::geom_circle(aes(
+    x0=Petal.Length, y0=Sepal.Width, r=1),
+    fill="grey50",
+    alpha=0.5,
+    data=data.table(t(mean.vec)))+
+  geom_point(aes(
+    x=Petal.Length, y=Sepal.Width),
+    alpha=0.3,
+    data=uniq.data)+
+  geom_point(aes(
+    x=Petal.Length, y=Sepal.Width, fill=Species),
+    shape=21,
+    size=2,
+    data=both.dt[type=="projection"])+
+  geom_blank(aes(
+    x=Petal.Length, y=Sepal.Width),
+    data=both.dt[type=="data"])+
+  geom_abline(aes(
+    slope=slope,
+    intercept=intercept),
+    data=abline.dt)+
+  geom_segment(aes(
+    mean.Petal.Length, mean.Sepal.Width,
+    xend=dir.Petal.Length, yend=dir.Sepal.Width),
+    size=2,
+    arrow=grid::arrow(length=grid::unit(0.2, "in"), type="closed"),
+    data=data.table(t(c(mean=mean.vec, dir=mean.vec+PC1))))+
+  geom_label(aes(
+    Petal.Length, Sepal.Width, label=lambda),
+    alpha=0.7,
+    data=line.dt)
+```
+
+- 0 represents mean of data.
+- $0\rightarrow 1$ represents an orthogonal unit vector.
+
+---
+
+# Principal component 2
+
+```{r, fig.height=5}
+ggplot()+
+  coord_equal()+
+  scale_fill_manual(values=color.code)+
+  ggforce::geom_circle(aes(
+    x0=Petal.Length, y0=Sepal.Width, r=1),
+    fill="grey50",
+    alpha=0.5,
+    data=data.table(t(mean.vec)))+
+  geom_point(aes(
+    x=Petal.Length, y=Sepal.Width),
+    alpha=0.3,
+    data=uniq.data)+
+  geom_blank(aes(
+    x=Petal.Length, y=Sepal.Width),
+    data=both.dt[type=="data"])+
+  geom_abline(aes(
+    slope=slope,
+    intercept=intercept),
+    data=abline.dt)+
+  geom_segment(aes(
+    mean.Petal.Length, mean.Sepal.Width,
+    xend=dir.Petal.Length, yend=dir.Sepal.Width),
+    size=2,
+    arrow=grid::arrow(length=grid::unit(0.2, "in"), type="closed"),
+    data=data.table(t(c(mean=mean.vec, dir=mean.vec+PC2))))
+```
+
+---
+
+# Re-plot using PC units
+
+```{r}
+ggplot()+
+  scale_fill_manual(values=color.code)+
+  geom_point(aes(
+    PC1, PC2, fill=Species),
+    shape=21,
+    data=data.table(pc.fit$x, Species=iris$Species))+
+  coord_equal()
+```
+
+---
+
+# Mathematical representation
+
+Each of the $n$ inputs $x_i \in \mathbb R^p$ where $p$ is the input
+dimension, $p=2$ for iris in previous slides, $p=784$ for images in
+next slides.
+
+$$ \min \sum_{i=1}^n || x_i - \mu - V_q \lambda_i ||^2. $$
+
+- $\mu\in\mathbb R^p$ is mean vector.
+- $V_q\in\mathbb R^{p\times q}$ is an orthogonal matrix (each column
+  is an orthogonal unit vector).
+- $\lambda_i\in\mathbb R^q$ is a vector of principal components
+  (contribution of each unit vector).
+
+---
+
+# Same analysis with MNIST digit data
+
+```{r}
+## 1. MNIST scatterplot of digit labels on first two pca directions (all
+## classes).
+if(file.exists("figure-fashion-mnist-data.rds")){
+  data.list <- readRDS("figure-fashion-mnist-data.rds")
+}else{
+  data.list <- list(
+    fashion=keras::dataset_fashion_mnist(),
+    digits=keras::dataset_mnist())
+  saveRDS(data.list, "figure-fashion-mnist-data.rds")
+}
+str(data.list$digits)
+
+X.mat.list <- list()
+obs.i.vec <- 1:1000
+for(obs.i in obs.i.vec){
+  X.mat.list[[obs.i]] <- as.numeric(data.list$digits$train$x[obs.i, , ])
+}
+X.mat <- do.call(rbind, X.mat.list)
+digit <- data.list$digits$train$y[obs.i.vec]
+## specifying rank arg is faster, use it if you don't need all the
+## principal components.
+digits.fit <- prcomp(X.mat, rank=2)
+digits.pc.dt <- data.table(
+  digits.fit$x, digit=factor(digit))
+
+ggplot()+
+  geom_text(aes(
+    PC1, PC2, label=digit),
+    data=digits.pc.dt)
+```
+
+---
+
+# Alternate visualization
+
+```{r}
+ggplot()+
+  geom_point(aes(
+    PC1, PC2, fill=digit),
+    shape=21,
+    data=digits.pc.dt)+
+  scale_fill_brewer(palette="Set3")
+```
+
+---
+
+# Another PCA on just one digit class
+
+```{r}
+## specifying rank arg is faster, use it if you don't need all the
+## principal components.
+is.one.digit <- digit==3
+X.one.digit <- X.mat[is.one.digit,]
+y.one.digit <- digit[is.one.digit]
+table(y.one.digit)
+digits.fit <- prcomp(X.one.digit)
+
+tile.dt.list <- list()
+n.pixels <- 28
+for(digit.i in 1:nrow(X.one.digit)){
+  tile.dt.list[[digit.i]] <- data.table(
+    digit.i,
+    intensity=X.one.digit[digit.i,],
+    row=rep(1:n.pixels, n.pixels),
+    col=rep(1:n.pixels, each=n.pixels))
+}
+tile.dt <- do.call(rbind, tile.dt.list)
+ggplot()+
+  scale_fill_gradient(low="black", high="white")+
+  geom_tile(aes(
+    col, -row, fill=intensity),
+    data=tile.dt)+
+  coord_equal()+
+  facet_wrap("digit.i", ncol=15)
+```
+
+---
+
+# Mapping onto first two PCs
+
+```{r}
+digits.pc.mat <- digits.fit[["x"]][, 1:2]
+digits.pc.dt <- data.table(digits.pc.mat)
+digits.pc.dt[, digit.i := 1:.N]
+line.dt.list <- list()
+expand.grid.args <- list()
+for(pc.name in colnames(digits.pc.mat)){
+  pc.vec <- digits.pc.dt[[pc.name]]
+  n.grid <- 6
+  pc.grid <- seq(min(pc.vec), max(pc.vec), l=n.grid)[-c(1,n.grid)]
+  expand.grid.args[[pc.name]] <- pc.grid
+  line.dt.list[[pc.name]] <- data.table(
+    pc.name,
+    type="grid",
+    pc.grid)
+}
+grid.point.dt <- data.table(do.call(expand.grid, expand.grid.args))
+grid.point.dt[, type := "grid"]
+digits.pc.dt[, type := "data"]
+gg.grid <- ggplot()+
+  geom_point(aes(
+    PC1, PC2, color=type),
+    data=digits.pc.dt)+
+  geom_point(aes(
+    PC1, PC2, color=type),
+    data=grid.point.dt)+
+  geom_vline(aes(
+    xintercept=pc.grid, color=type),
+    data=line.dt.list[["PC1"]])+
+  geom_hline(aes(
+    yintercept=pc.grid, color=type),
+    data=line.dt.list[["PC2"]])
+gg.grid
+```
+
+---
+
+# Highlight closest data point to each grid point
+
+```{r}
+grid.tile.dt.list <- list()
+closest.pc.list <- list()
+for(grid.i in 1:nrow(grid.point.dt)){
+  one.grid.point <- grid.point.dt[grid.i]
+  one.grid.mat <- one.grid.point[, matrix(
+    c(PC1, PC2), nrow=nrow(digits.pc.mat), ncol=2, byrow=TRUE)]
+  dist.vec <- rowSums((one.grid.mat-digits.pc.mat)^2)
+  closest.i <- which.min(dist.vec)
+  closest.pc.list[[grid.i]] <- data.table(digits.pc.mat[closest.i,,drop=FALSE])
+  grid.tile.dt.list[[grid.i]] <- data.table(
+    one.grid.point,
+    grid.i,
+    intensity=X.one.digit[grid.i,],
+    row=rep(1:n.pixels, n.pixels),
+    col=rep(1:n.pixels, each=n.pixels))
+}
+grid.tile.dt <- do.call(rbind, grid.tile.dt.list)
+closest.pc <- do.call(rbind, closest.pc.list)
+gg.grid+
+  geom_point(aes(
+    PC1, PC2),
+    data=closest.pc)
+```
+
+---
+
+# Digits highlighted
+
+```{r}
+ggplot()+
+  geom_tile(aes(
+    col, -row, fill=intensity),
+    data=grid.tile.dt)+
+  scale_fill_gradient(low="black", high="white")+
+  coord_equal()+
+  facet_grid(PC2 ~ PC1, labeller=label_both)
+```
+
+---
+
+# One digit 
+
+```{r}
+## 2. mean and first two eigendigits. reconstruction % and number of
+##    components in different panels for a single example. (MLAPP Fig
+##    12.6)
+obs.i <- 11
+obs.i.tiles <- data.table(
+  intensity=X.one.digit[obs.i,],
+  row=rep(1:n.pixels, n.pixels),
+  col=rep(1:n.pixels, each=n.pixels))
+n.pixels <- 28
+reconstruction.dt.list <- list()
+for(n.components in 0:nrow(digits.fit$x)){
+  reconstruction <- if(n.components==0){
+    digits.fit$center
+  }else{
+    reconstruction +
+      digits.fit$rotation[,n.components] *
+      digits.fit$x[obs.i,n.components]
+  }
+  reconstruction.dt.list[[paste(n.components)]] <- data.table(
+    intensity=reconstruction,
+    row=rep(1:n.pixels, n.pixels),
+    col=rep(1:n.pixels, each=n.pixels))
+}
+reconstruction.dt <- do.call(rbind, reconstruction.dt.list)
+rec.range <- range(reconstruction.dt$intensity)
+plot.components <- function(comp){
+  ggplot()+
+    coord_equal()+
+    geom_tile(aes(
+      col, -row, fill=intensity),
+      data=reconstruction.dt.list[[paste(comp)]])+
+    scale_fill_gradient(low="black", high="white", limits=rec.range)
+}
+ggplot()+
+  coord_equal()+
+  geom_tile(aes(
+    col, -row, fill=intensity),
+    data=obs.i.tiles)+
+  scale_fill_gradient(low="black", high="white", limits=rec.range)
+```
+
+---
+
+# Reconstruction with no components (mean)
+
+```{r}
+plot.components(0)
+```
+
+---
+
+# Reconstruction with one PC
+
+```{r}
+plot.components(1)
+```
+
+---
+
+# Reconstruction with 2 PCs
+
+```{r}
+plot.components(2)
+```
+
+---
+
+# Reconstruction with 5 PCs
+
+```{r}
+plot.components(5)
+```
+
+---
+
+# Reconstruction with 10 PCs
+
+```{r}
+plot.components(10)
+```
+
+---
+
+# Reconstruction with 50 PCs
+
+```{r}
+plot.components(50)
+```
+
+---
+
+# Reconstruction with all PCs
+
+```{r}
+plot.components(rev(names(reconstruction.dt.list))[1])
+```
+
+---
+
+# Possible exam questions
+
+- TODO

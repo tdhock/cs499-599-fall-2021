@@ -1,0 +1,35 @@
+Principal components analysis. The goal of this homework is to use PCA
+for dimensionality reduction in a data set of handwritten digit images.
+
+1. use prcomp() on 100 rows of the zip.train data from the ESL book
+   (10 from each class). Make a ggplot with a geom_text that shows
+   each row with its corresponding class label (x=PC1, y=PC2,
+   label=class). Do the classes cluster together in the plot?
+
+2. For each number of principal components from 1 to 100, compute 
+   the reconstruction error (sum of squares between the data and
+   model). Then plot y=error as a function of x=number of
+   components. Is the reconstruction error zero at 100 components as
+   expected?
+
+3. Choose one image/row from the 100 data you used in problem 1. For
+   each number of components in {1, 5, 10, 50, 100} plot the
+   reconstruction of that image in a different panel, using
+   geom_tile. For comparison also include a panel for the original
+   image. Is the original image equal to the model with 100
+   components, as expected?
+
+** CS599 graduate students only
+
+Your task this week is to implement a function PCA which computes
+principal components analysis "from scratch" using the base::svd
+function in R. Use the text and equations in the book, and make sure
+to center each column before using svd, via scale(X, center=TRUE,
+scale=FALSE). Use can use u %*% diag(d) to convert the svd output to
+the principal components matrix (rotation element of prcomp
+output). Use your function on the same data set as problem 1
+above. Plot the reconstruction error as in problem 2 using different
+colors/sizes for different functions (e.g., black=prcomp/2,
+red=PCA/1). Does your function result in the same values for the
+reconstruction error?
+

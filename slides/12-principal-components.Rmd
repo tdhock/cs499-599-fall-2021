@@ -562,6 +562,23 @@ plot.components(rev(names(reconstruction.dt.list))[1])
 
 ---
 
+# How to compute PCA?
+
+SVD = Singular Value Decomposition (many algorithms available to
+compute).
+
+$$ X = UDV^T $$
+
+- $X \in \mathbb R^{n\times p}$ data matrix.
+- $U \in \mathbb R^{n\times p}$ orthogonal matrix.
+- $D \in \mathbb R^{p\times p}$ diagonal matrix.
+- $V \in \mathbb R^{p\times p}$ orthogonal matrix.
+- The $V_q$ we want for PCA is the first $q$ columns of $V$.
+- The columns of $UD$ are the principal components, $\lambda_i$
+  values.
+
+---
+
 # Possible exam questions
 
 - TODO

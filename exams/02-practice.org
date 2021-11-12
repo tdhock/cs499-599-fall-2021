@@ -39,7 +39,7 @@ Rubric: minus points for incomplete and/or off-topic responses.
 
 Volunteers to present solutions:
 - CS499: Georgia, Taylor, Brendan, Charlie, Austin.
-- CS599: TODO
+- CS599: Kyle, Jacob, Shadmaan, Hunor.
 
 For the real mid-term (in class at time shown below), what would be
 the analogous questions for the other topics that we have studied?

@@ -1,0 +1,394 @@
+---
+title: "Auto-encoders"
+author: "Toby Dylan Hocking"
+output: beamer_presentation
+---
+
+```{r opts, echo=FALSE}
+knitr::opts_chunk$set(
+  echo=FALSE, results=FALSE,
+  fig.width=10,
+  fig.height=7)
+suppressPackageStartupMessages({
+  library(data.table)
+  library(ggplot2)
+})
+text.size <- 5
+theme_set(
+  theme_bw()+
+    theme(
+      panel.spacing=grid::unit(0, "lines"),
+      text=element_text(size=20)))
+```
+
+# Motivation: MNIST digits data
+
+```{r}
+## 1. MNIST scatterplot of digit labels on first two pca directions (all
+## classes).
+if(file.exists("figure-fashion-mnist-data.rds")){
+  data.list <- readRDS("figure-fashion-mnist-data.rds")
+}else{
+  data.list <- list(
+    fashion=keras::dataset_fashion_mnist(),
+    digits=keras::dataset_mnist())
+  saveRDS(data.list, "figure-fashion-mnist-data.rds")
+}
+str(data.list$digits)
+X.mat.list <- list()
+n.digits <- 100
+obs.i.vec <- 1:n.digits
+X.mat <- matrix(
+  data.list$digits$train$x[obs.i.vec, , ],
+  n.digits)
+image_mat_to_dt <- function(X, n.pixels=28){
+  X.t <- t(X)
+  data.table(
+    digit.i=as.integer(col(X.t)),
+    intensity=as.numeric(X.t),
+    row=rep(1:n.pixels, n.pixels),
+    col=rep(1:n.pixels, each=n.pixels))
+}
+tile.dt <- image_mat_to_dt(X.mat)
+intensity.scale <- scale_fill_gradient2(
+  mid="black", high="white", low="red", limits=c(NA, 255))
+gg.mnist <- ggplot()+
+  intensity.scale+
+  geom_raster(aes(
+    col, -row, fill=intensity),
+    data=tile.dt)+
+  coord_equal()+
+  facet_wrap("digit.i", ncol=15)
+gg.mnist
+```
+
+---
+
+# Set of digits is represented as a matrix
+
+- Each digit image in MNIST data set is a matrix of $28\times 28$
+  pixel intensity values, $x_i\in\{0,\dots,255\}^{784}$.
+- Each of the images is a row in the data matrix.
+- Each of the columns is a pixel.
+- All images on last slide represented by a data matrix with $n=100$
+  rows/images and $p=784$ columns/pixels.
+
+---
+
+# Background/motivation: dimensionality reduction
+
+- High dimensional data are difficult to visualize.
+- For example each observation/example in the MNIST data is of dimension
+  28 x 28 = 784 pixels.
+- We would like to map each observation into a lower-dimensional
+  space for visualization / understanding patterns in the data.
+  
+---
+  
+# Example: 2d iris data
+
+- Simpler example: iris.
+- One row for each flower (only 6 of 150 shown below).
+- One column for each measurement/dimension.
+
+```{r results=TRUE}
+i.df <- iris[, 2:3]
+head(i.df)
+```
+
+---
+  
+# Example: 2d iris data
+
+```{r}
+gg <- ggplot()+
+  geom_point(aes(
+    x=Petal.Length, y=Sepal.Width),
+    shape=1,
+    data=i.df)+
+  coord_equal()
+gg
+```
+
+---
+
+# Project 2d data onto 1d subspace (line)
+
+```{r}
+##library(checkpoint)
+##checkpoint("2020-11-01")
+library(keras)
+## from https://github.com/rstudio/keras/issues/937
+if(FALSE){
+  install.packages("keras")
+  keras::install_keras(version = "2.1.6", tensorflow = "1.5")
+  ## https://anaconda.org/conda-forge/tensorflow/files?version=1.5.0
+  system("conda activate r-reticulate && conda install keras=2.1.6 tensorflow=1.5.0 -c conda-forge")
+  system("conda install python=3.6")
+  ##/home/tdhock/.local/share/r-miniconda/envs/r-reticulate/lib/python3.6/site-packages/keras/_
+  install.packages("../keras_2.3.0.0.tar.gz", repo=NULL)
+}
+keras::use_implementation("keras")
+keras::use_backend("tensorflow")
+
+n.input.output <- ncol(i.df)
+model <- keras::keras_model_sequential() %>%
+  keras::layer_dense(
+    name="code",
+    input_shape = n.input.output,
+    units = 1, 
+    activation = activation_linear) %>%
+  keras::layer_dense(
+    units = n.input.output)
+compiled.model <- keras::compile(
+  model,
+  optimizer=keras::optimizer_sgd(lr=0.01),
+  loss=keras::loss_mean_squared_error)
+i.mat <- as.matrix(i.df)
+i.prcomp <- prcomp(i.mat, rank=1)
+i.pred.prcomp <- with(i.prcomp, matrix(
+  center, nrow(i.mat), ncol(i.mat), byrow=TRUE) + x %*% t(rotation))
+i.err.prcomp <- mean((i.pred.prcomp - i.mat)^2)
+epoch.pred.list <- list()
+epoch.loss.list <- list()
+i.err.nn <- Inf
+epoch <- 0
+while(i.err.nn > i.err.prcomp*1.05){
+  epoch <- epoch+1
+  fit.model <- keras::fit(
+    compiled.model, x=i.mat, y=i.mat,
+    epochs=1,
+    verbose=0)
+  i.err.nn <- fit.model[["metrics"]][["loss"]]
+  epoch.loss.list[[epoch]] <- data.table(epoch, loss=i.err.nn)
+  pred.mat <- predict(compiled.model, i.mat)#last layer.
+  pred.dt <- data.table(pred.mat)
+  setnames(pred.dt, names(i.df))
+  epoch.pred.list[[epoch]] <- data.table(epoch, pred.dt)
+}
+epoch.pred <- do.call(rbind, epoch.pred.list)
+epoch.loss <- do.call(rbind, epoch.loss.list)
+
+pca.hline <- data.table(loss=i.err.prcomp)
+algo.colors <- c(
+  SGD="blue",
+  SVD="red")
+lambda.intercept <-
+  -i.prcomp$center[["Petal.Length"]]/i.prcomp$rotation["Petal.Length",]
+abline.dt <- data.table(
+  method="slope/intercept",
+  intercept=i.prcomp$center[["Sepal.Width"]] +
+    lambda.intercept*i.prcomp$rotation["Sepal.Width",],
+  slope=i.prcomp$rotation["Sepal.Width",]/i.prcomp$rotation["Petal.Length",])
+range.dt <- rbind(
+  epoch.pred[, colnames(i.mat), with=FALSE], i.mat
+)[, lapply(.SD, range)]
+pca.epoch.plot <- function(show.epoch){
+  text.dt <- rbind(
+    data.table(algorithm="SGD", epoch.loss[show.epoch, .(loss)]),
+    data.table(algorithm="SVD", loss=i.err.prcomp))
+  show.pred <- epoch.pred[epoch==show.epoch]
+  show.segs <- data.table(pred=show.pred, data=i.mat)
+  ggplot()+
+    ggtitle(paste0("Epoch=", show.epoch))+
+    geom_text(aes(
+      4, 4,
+      color=algorithm,
+      label=sprintf(
+        "%s loss=%.2f", algorithm, loss),
+      vjust=ifelse(algorithm=="SGD", 1.1, -0.1)),
+      size=text.size,
+      hjust=1,
+      data=text.dt)+
+    scale_x_continuous(
+      "Petal Length",
+      limits=range.dt[["Petal.Length"]])+
+    scale_y_continuous(
+      "Sepal Width",
+      limits=range.dt[["Sepal.Width"]])+
+    geom_point(aes(
+      x=Petal.Length, y=Sepal.Width),
+      shape=1,
+      data=i.df)+
+    coord_equal()+
+    scale_color_manual(values=algo.colors)+
+    geom_abline(aes(
+      slope=slope,
+      color=algorithm,
+      intercept=intercept),
+      data=data.table(abline.dt, algorithm="SVD"))+
+    geom_segment(aes(
+      data.Petal.Length, data.Sepal.Width,
+      xend=pred.Petal.Length, yend=pred.Sepal.Width),
+      color="grey",
+      alpha=0.5,
+      data=data.table(show.segs, algorithm="SGD"))+
+    geom_point(aes(
+      Petal.Length, Sepal.Width, color=algorithm),
+      shape=1,
+      data=data.table(show.pred, algorithm="SGD"))
+}
+
+
+pca.epoch.plot(1)
+```
+
+---
+
+# Visualization of predicted values
+
+```{r}
+pca.epoch.plot(2)
+```
+
+---
+
+# Visualization of predicted values
+
+```{r}
+pca.epoch.plot(3)
+```
+
+---
+
+# Visualization of predicted values
+
+```{r}
+pca.epoch.plot(4)
+```
+
+---
+
+# Visualization of predicted values
+
+```{r}
+pca.epoch.plot(10)
+```
+
+---
+
+# Visualization of predicted values
+
+```{r}
+pca.epoch.plot(100)
+```
+
+---
+
+# Visualization of predicted values
+
+```{r}
+pca.epoch.plot(200)
+```
+
+---
+
+# Visualization of predicted values
+
+```{r}
+pca.epoch.plot(nrow(epoch.loss))
+```
+
+---
+
+# Loss decreases with number of epochs
+
+```{r}
+gg <- ggplot()+
+  scale_color_manual(values=algo.colors)+
+  geom_hline(aes(
+    yintercept=loss,
+    color=algorithm),
+    data=data.table(pca.hline, algorithm="SVD"))+
+  scale_y_log10()+
+  geom_point(aes(
+    epoch, loss, color=algorithm),
+    shape=1,
+    data=data.table(epoch.loss, algorithm="SGD"))
+gg
+```
+
+---
+
+# Zoom to last 100 epochs
+
+```{r}
+gg <- ggplot()+
+  scale_color_manual(values=algo.colors)+
+  geom_hline(aes(
+    yintercept=loss,
+    color=algorithm),
+    data=data.table(pca.hline, algorithm="SVD"))+
+  scale_y_log10()+
+  geom_point(aes(
+    epoch, loss, color=algorithm),
+    shape=1,
+    data=data.table(epoch.loss, algorithm="SGD")[seq(.N-100, .N)])
+gg
+```
+
+---
+
+# Visualization of predicted values
+
+```{r}
+
+n.intermediate <- 10
+n.code.units <- 2
+my_activation <- activation_sigmoid
+model <- keras::keras_model_sequential() %>%
+  keras::layer_dense(
+    name="int1",
+    input_shape = n.input.output,
+    units = n.intermediate, 
+    activation = my_activation) %>%
+  keras::layer_dense(
+    name="code",
+    units = n.code.units, 
+    activation = my_activation) %>%
+  keras::layer_dense(
+    name="int2",
+    units = n.intermediate, 
+    activation = my_activation) %>%
+  keras::layer_dense(
+    units = n.input.output,
+    activation = my_activation)
+
+epoch.pred.list <- list()
+epoch.loss.list <- list()
+i.err.nn <- Inf
+epoch <- 0
+while(i.err.nn > i.err.prcomp*1.05){
+  epoch <- epoch+1
+  fit.model <- keras::fit(
+    compiled.model, x=i.mat, y=i.mat,
+    epochs=1,
+    verbose=0)
+  i.err.nn <- fit.model[["metrics"]][["loss"]]
+  epoch.loss.list[[epoch]] <- data.table(epoch, loss=i.err.nn)
+  pred.mat <- predict(compiled.model, i.mat)#last layer.
+  pred.dt <- data.table(pred.mat)
+  setnames(pred.dt, names(i.df))
+  epoch.pred.list[[epoch]] <- data.table(epoch, pred.dt)
+}
+epoch.pred <- do.call(rbind, epoch.pred.list)
+epoch.loss <- do.call(rbind, epoch.loss.list)
+
+
+
+intermediate_layer_model <- keras::keras_model(
+  inputs = compiled.model$input,
+  outputs = keras::get_layer(compiled.model, "code")$output)
+intermediate_output <- predict(intermediate_layer_model, i.mat)
+
+```
+
+---
+
+# Possible exam questions
+
+- When is the max number of principal components equal to the number
+  of rows of the data matrix?
+- When is the max number of principal components equal to the number
+  of columns of the data matrix?
+

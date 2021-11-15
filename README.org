@@ -134,8 +134,8 @@ that week, 11:59PM.
 - Nov 8, Veterans day 11/11. [[file:homeworks/12-principal-components.org][Homework week 12]]: Principal Components Analysis
   - [[file:slides/12-principal-components.Rmd][Slides]], Principal Components Analysis, ESL-14.5. MLAPP-12.2.
   - Quizzes PCA 1-3.
-- Nov 15, Homework week 13: Auto-encoders
-  - Deep generative models, MLAPP-28.2 to 28.3. Deep auto-encoders,
+- Nov 15, [[file:homeworks/13-auto-encoders.org][Homework week 13]]: Auto-encoders
+  - [[file:slides/13-auto-encoders.pdf][Slides]], Deep generative models, MLAPP-28.2 to 28.3. Deep auto-encoders,
     MLAPP-28.3.2. MLAPP-28.4.2 to 28.4.3.
   - Quizzes Autoencoders 1-3.
 - Nov 22, Thanksgiving 11/25-26. Homework week 14. T-SNE or

@@ -9,25 +9,94 @@ knitr::opts_chunk$set(
   echo=FALSE, results=FALSE,
   fig.width=10,
   fig.height=7)
+suppressPackageStartupMessages({
+  library(data.table)
+  library(ggplot2)
+})
 ```
+
+# Motivation: MNIST digits data
+
+```{r}
+## 1. MNIST scatterplot of digit labels on first two pca directions (all
+## classes).
+if(file.exists("figure-fashion-mnist-data.rds")){
+  data.list <- readRDS("figure-fashion-mnist-data.rds")
+}else{
+  data.list <- list(
+    fashion=keras::dataset_fashion_mnist(),
+    digits=keras::dataset_mnist())
+  saveRDS(data.list, "figure-fashion-mnist-data.rds")
+}
+str(data.list$digits)
+X.mat.list <- list()
+n.digits <- 100
+obs.i.vec <- 1:n.digits
+X.mat <- matrix(
+  data.list$digits$train$x[obs.i.vec, , ],
+  n.digits)
+image_mat_to_dt <- function(X, n.pixels=28){
+  X.t <- t(X)
+  data.table(
+    digit.i=as.integer(col(X.t)),
+    intensity=as.numeric(X.t),
+    row=rep(1:n.pixels, n.pixels),
+    col=rep(1:n.pixels, each=n.pixels))
+}
+tile.dt <- image_mat_to_dt(X.mat)
+intensity.scale <- scale_fill_gradient2(
+  mid="black", high="white", low="red", limits=c(NA, 255))
+gg.mnist <- ggplot()+
+  intensity.scale+
+  geom_raster(aes(
+    col, -row, fill=intensity),
+    data=tile.dt)+
+  coord_equal()+
+  facet_wrap("digit.i", ncol=15)
+gg.mnist
+```
+
+---
+
+# Set of digits is represented as a matrix
+
+- Each digit image in MNIST data set is a matrix of $28\times 28$
+  pixel intensity values, $x_i\in\{0,\dots,255\}^{784}$.
+- Each of the images is a row in the data matrix.
+- Each of the columns is a pixel.
+- All images on last slide represented by a data matrix with $n=100$
+  rows/images and $p=784$ columns/pixels.
+
+---
 
 # Background/motivation: dimensionality reduction
 
 - High dimensional data are difficult to visualize.
-- For example each observation/example in the zip data is of dimension
-  16 x 16 = 256 pixels.
+- For example each observation/example in the MNIST data is of dimension
+  28 x 28 = 784 pixels.
 - We would like to map each observation into a lower-dimensional
   space for visualization / understanding patterns in the data.
   
-# Example 1: 2d iris data
+---
+  
+# Example: 2d iris data
+
+- Simpler example: iris.
+- One row for each flower (only 6 of 150 shown below).
+- One column for each measurement/dimension.
+
+```{r results=TRUE}
+i.df <- iris[, 2:3]
+head(i.df)
+```
+
+---
+  
+# Example: 2d iris data
 
 ```{r}
 ## 0. iris data scatterplot two columns with one principal component line
 ##    and orthogonal projection segments.
-library(data.table)
-i.df <- iris[, 2:3]
-str(i.df)
-library(ggplot2)
 gg <- ggplot()+
   geom_point(aes(
     x=Petal.Length, y=Sepal.Width),
@@ -125,6 +194,22 @@ ggplot()+
     xend=pred.Petal.Length),
     data=segs.dt)
 ```
+
+---
+
+# Mathematical representation
+
+Each of the $n$ inputs $x_i \in \mathbb R^p$ where $p$ is the input
+dimension, $p=2$ for iris in previous slides, or $p=784$ for the
+images of digits MNIST data.
+
+$$ \min \sum_{i=1}^n || x_i - \mu - V_q \lambda_i ||^2. $$
+
+- $\mu\in\mathbb R^p$ is mean vector.
+- $V_q\in\mathbb R^{p\times q}$ is an orthogonal matrix (each column
+  is an orthogonal unit vector).
+- $\lambda_i\in\mathbb R^q$ is a vector of principal components
+  (contribution of each unit vector).
 
 ---
 
@@ -230,8 +315,10 @@ ggplot()+
     data=line.dt)
 ```
 
-- 0 represents mean of data.
-- $0\rightarrow 1$ represents an orthogonal unit vector.
+- 0 represents mean $\mu$ of data.
+- $0\rightarrow 1$ is an orthogonal unit vector, a principal
+  direction, first column of $V_q$.
+- Numbers in white boxes represent principal components, $\lambda_i$.
 
 ---
 
@@ -281,50 +368,23 @@ ggplot()+
 
 ---
 
-# Mathematical representation
+# MNIST digits data
 
-Each of the $n$ inputs $x_i \in \mathbb R^p$ where $p$ is the input
-dimension, $p=2$ for iris in previous slides, $p=784$ for images in
-next slides.
-
-$$ \min \sum_{i=1}^n || x_i - \mu - V_q \lambda_i ||^2. $$
-
-- $\mu\in\mathbb R^p$ is mean vector.
-- $V_q\in\mathbb R^{p\times q}$ is an orthogonal matrix (each column
-  is an orthogonal unit vector).
-- $\lambda_i\in\mathbb R^q$ is a vector of principal components
-  (contribution of each unit vector).
+```{r}
+gg.mnist
+```
 
 ---
 
-# Same analysis with MNIST digit data
+# PCA with MNIST digit data
 
 ```{r}
-## 1. MNIST scatterplot of digit labels on first two pca directions (all
-## classes).
-if(file.exists("figure-fashion-mnist-data.rds")){
-  data.list <- readRDS("figure-fashion-mnist-data.rds")
-}else{
-  data.list <- list(
-    fashion=keras::dataset_fashion_mnist(),
-    digits=keras::dataset_mnist())
-  saveRDS(data.list, "figure-fashion-mnist-data.rds")
-}
-str(data.list$digits)
-
-X.mat.list <- list()
-obs.i.vec <- 1:1000
-for(obs.i in obs.i.vec){
-  X.mat.list[[obs.i]] <- as.numeric(data.list$digits$train$x[obs.i, , ])
-}
-X.mat <- do.call(rbind, X.mat.list)
 digit <- data.list$digits$train$y[obs.i.vec]
 ## specifying rank arg is faster, use it if you don't need all the
 ## principal components.
 digits.fit <- prcomp(X.mat, rank=2)
 digits.pc.dt <- data.table(
   digits.fit$x, digit=factor(digit))
-
 ggplot()+
   geom_text(aes(
     PC1, PC2, label=digit),
@@ -333,42 +393,20 @@ ggplot()+
 
 ---
 
-# Alternate visualization
-
-```{r}
-ggplot()+
-  geom_point(aes(
-    PC1, PC2, fill=digit),
-    shape=21,
-    data=digits.pc.dt)+
-  scale_fill_brewer(palette="Set3")
-```
-
----
-
 # Another PCA on just one digit class
 
 ```{r}
-## specifying rank arg is faster, use it if you don't need all the
-## principal components.
+n.digits <- 1000
+obs.i.vec <- 1:n.digits
+X.mat <- matrix(
+  data.list$digits$train$x[obs.i.vec, , ],
+  n.digits)
+digit <- data.list$digits$train$y[obs.i.vec]
 is.one.digit <- digit==3
 X.one.digit <- X.mat[is.one.digit,]
-y.one.digit <- digit[is.one.digit]
-table(y.one.digit)
-digits.fit <- prcomp(X.one.digit)
-
-tile.dt.list <- list()
-n.pixels <- 28
-for(digit.i in 1:nrow(X.one.digit)){
-  tile.dt.list[[digit.i]] <- data.table(
-    digit.i,
-    intensity=X.one.digit[digit.i,],
-    row=rep(1:n.pixels, n.pixels),
-    col=rep(1:n.pixels, each=n.pixels))
-}
-tile.dt <- do.call(rbind, tile.dt.list)
+tile.dt <- image_mat_to_dt(X.one.digit)
 ggplot()+
-  scale_fill_gradient(low="black", high="white")+
+  intensity.scale+
   geom_tile(aes(
     col, -row, fill=intensity),
     data=tile.dt)+
@@ -381,6 +419,7 @@ ggplot()+
 # Mapping onto first two PCs
 
 ```{r}
+digits.fit <- prcomp(X.one.digit)
 digits.pc.mat <- digits.fit[["x"]][, 1:2]
 digits.pc.dt <- data.table(digits.pc.mat)
 digits.pc.dt[, digit.i := 1:.N]
@@ -397,7 +436,9 @@ for(pc.name in colnames(digits.pc.mat)){
     pc.grid)
 }
 grid.point.dt <- data.table(do.call(expand.grid, expand.grid.args))
+grid.point.mat <- as.matrix(grid.point.dt)
 grid.point.dt[, type := "grid"]
+grid.point.dt[, digit.i := 1:.N]
 digits.pc.dt[, type := "data"]
 gg.grid <- ggplot()+
   geom_point(aes(
@@ -417,30 +458,62 @@ gg.grid
 
 ---
 
+# Reconstruction at grid points
+
+```{r}
+reconstruction.mat <- grid.point.mat %*% t(digits.fit$rotation[,1:2])
+reconstruction.dt <- image_mat_to_dt(
+  reconstruction.mat
+)[grid.point.dt, on="digit.i"]
+pc_num_to_chr <- function(pc.num){
+  sprintf("%.1f", pc.num)
+}
+pc_num_to_fac <- function(pc.num){
+  pc.chr <- pc_num_to_chr(pc.num)
+  factor(pc.chr, unique(sort(pc.chr, decreasing=TRUE)))
+}
+make_pc <- function(DT){
+  DT[, `:=`(
+    pc1=pc_num_to_chr(PC1),
+    pc2=pc_num_to_fac(PC2)
+  )]
+}
+ggplot()+
+  geom_tile(aes(
+    col, -row, fill=intensity),
+    data=make_pc(reconstruction.dt))+
+  intensity.scale+
+  coord_equal()+
+  facet_grid(pc2 ~ pc1, labeller=label_both)
+```
+
+---
+
 # Highlight closest data point to each grid point
 
 ```{r}
-grid.tile.dt.list <- list()
-closest.pc.list <- list()
-for(grid.i in 1:nrow(grid.point.dt)){
-  one.grid.point <- grid.point.dt[grid.i]
-  one.grid.mat <- one.grid.point[, matrix(
-    c(PC1, PC2), nrow=nrow(digits.pc.mat), ncol=2, byrow=TRUE)]
+grid.point.dt[, closest.i := {
+  one.grid.mat <- matrix(
+    c(PC1, PC2),
+    nrow=nrow(digits.pc.mat),
+    ncol=2,
+    byrow=TRUE)
   dist.vec <- rowSums((one.grid.mat-digits.pc.mat)^2)
-  closest.i <- which.min(dist.vec)
-  closest.pc.list[[grid.i]] <- data.table(digits.pc.mat[closest.i,,drop=FALSE])
-  grid.tile.dt.list[[grid.i]] <- data.table(
-    one.grid.point,
-    grid.i,
-    intensity=X.one.digit[grid.i,],
-    row=rep(1:n.pixels, n.pixels),
-    col=rep(1:n.pixels, each=n.pixels))
-}
-grid.tile.dt <- do.call(rbind, grid.tile.dt.list)
-closest.pc <- do.call(rbind, closest.pc.list)
+  which.min(dist.vec)
+}, by=digit.i]
+grid.tile.dt <- image_mat_to_dt(
+  X.one.digit[grid.point.dt$closest.i,]
+)[grid.point.dt, on="digit.i"]
+closest.pc <- data.table(
+  data=digits.pc.mat[grid.point.dt$closest.i,],
+  grid=grid.point.dt)
 gg.grid+
   geom_point(aes(
-    PC1, PC2),
+    data.PC1, data.PC2),
+    data=closest.pc)+
+  geom_segment(aes(
+    data.PC1, data.PC2,
+    xend=grid.PC1, yend=grid.PC2),
     data=closest.pc)
 ```
 
@@ -452,10 +525,10 @@ gg.grid+
 ggplot()+
   geom_tile(aes(
     col, -row, fill=intensity),
-    data=grid.tile.dt)+
-  scale_fill_gradient(low="black", high="white")+
+    data=make_pc(grid.tile.dt))+
+  intensity.scale+
   coord_equal()+
-  facet_grid(PC2 ~ PC1, labeller=label_both)
+  facet_grid(pc2 ~ pc1, labeller=label_both)
 ```
 
 ---
@@ -467,11 +540,7 @@ ggplot()+
 ##    components in different panels for a single example. (MLAPP Fig
 ##    12.6)
 obs.i <- 11
-obs.i.tiles <- data.table(
-  intensity=X.one.digit[obs.i,],
-  row=rep(1:n.pixels, n.pixels),
-  col=rep(1:n.pixels, each=n.pixels))
-n.pixels <- 28
+obs.i.tiles <- image_mat_to_dt(X.one.digit[obs.i,,drop=FALSE])
 reconstruction.dt.list <- list()
 for(n.components in 0:nrow(digits.fit$x)){
   reconstruction <- if(n.components==0){
@@ -481,10 +550,9 @@ for(n.components in 0:nrow(digits.fit$x)){
       digits.fit$rotation[,n.components] *
       digits.fit$x[obs.i,n.components]
   }
-  reconstruction.dt.list[[paste(n.components)]] <- data.table(
-    intensity=reconstruction,
-    row=rep(1:n.pixels, n.pixels),
-    col=rep(1:n.pixels, each=n.pixels))
+  reconstruction.mat <- matrix(reconstruction, nrow=1)
+  reconstruction.dt.list[[paste(n.components)]] <-
+    image_mat_to_dt(reconstruction.mat)
 }
 reconstruction.dt <- do.call(rbind, reconstruction.dt.list)
 rec.range <- range(reconstruction.dt$intensity)
@@ -581,4 +649,8 @@ $$ X = UDV^T $$
 
 # Possible exam questions
 
-- TODO
+- When is the max number of principal components equal to the number
+  of rows of the data matrix?
+- When is the max number of principal components equal to the number
+  of columns of the data matrix?
+

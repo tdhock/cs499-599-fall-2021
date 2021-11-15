@@ -142,6 +142,36 @@ ggplot()+
   
 ---
 
+# Activation function choices
+
+- linear: $\sigma(z) = z$.
+- relu: $\sigma(z) = z\text{ if }z\geq 0\text{ else } 0$.
+- sigmoid: $\sigma(z) = 1/(1+e^{-z})$.
+
+```{r}
+input <- seq(-3, 3, by=0.1)
+fun.list <- list(
+  linear=identity,
+  relu=function(x)ifelse(x>0, x, 0),
+  sigmoid=function(x)1/(1+exp(-x)))
+act.dt.list <- list()
+for(activation.name in names(fun.list)){
+  fun <- fun.list[[activation.name]]
+  act.dt.list[[activation.name]] <- data.table(
+    activation.name,
+    input,
+    activation=fun(input))
+}
+act.dt <- do.call(rbind, act.dt.list)
+ggplot()+
+  geom_line(aes(
+    input, activation),
+    data=act.dt)+
+  facet_grid(. ~ activation.name, labeller=label_both)
+```
+  
+---
+
 # Auto-encoder learning algorithm
 
 - The goal of learning is to find a low dimensional mapping of the

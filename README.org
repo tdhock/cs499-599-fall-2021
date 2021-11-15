@@ -138,7 +138,8 @@ that week, 11:59PM.
   - Deep generative models, MLAPP-28.2 to 28.3. Deep auto-encoders,
     MLAPP-28.3.2. MLAPP-28.4.2 to 28.4.3.
   - Quizzes Autoencoders 1-3.
-- Nov 22, Thanksgiving 11/25-26. Homework week 14. T-SNE or Self-organizing maps?
+- Nov 22, Thanksgiving 11/25-26. Homework week 14. T-SNE or
+  Self-organizing maps?
 - Nov 29, Reading week, [[file:homeworks/Rpkg.org][CS599 grad student extra credit R package
   coding project 3 due (this project is not required; you only have to
   do this if you want extra credit points)]].

@@ -9,9 +9,31 @@ knitr::opts_chunk$set(
   echo=FALSE, results=FALSE,
   fig.width=10,
   fig.height=7)
+algo.colors <- c(
+  SGD="blue",
+  SVD="red")
+model.colors <- structure(algo.colors, names=c("Auto-encoder", "PCA"))
 suppressPackageStartupMessages({
+  if(!requireNamespace("R.utils")){
+    install.packages("R.utils")
+  }
   library(data.table)
   library(ggplot2)
+  ##library(checkpoint)
+  ##checkpoint("2020-11-01")
+  library(keras)
+  ## from https://github.com/rstudio/keras/issues/937
+  if(FALSE){
+    install.packages("keras")
+    keras::install_keras(version = "2.1.6", tensorflow = "1.5")
+    ## https://anaconda.org/conda-forge/tensorflow/files?version=1.5.0
+    system("conda activate r-reticulate && conda install keras=2.1.6 tensorflow=1.5.0 -c conda-forge")
+    system("conda install python=3.6")
+    ##/home/tdhock/.local/share/r-miniconda/envs/r-reticulate/lib/python3.6/site-packages/keras/_
+    install.packages("../keras_2.3.0.0.tar.gz", repo=NULL)
+  }
+  keras::use_implementation("keras")
+  keras::use_backend("tensorflow")
 })
 text.size <- 5
 theme_set(
@@ -24,6 +46,22 @@ theme_set(
 # Motivation: MNIST digits data
 
 ```{r}
+destfile <- "zip.train.gz"
+datasets.url <-
+  "https://web.stanford.edu/~hastie/ElemStatLearn/datasets/"
+if(!file.exists(destfile)){
+  zip.url <- paste0(datasets.url, destfile)
+  download.file(zip.url, destfile)
+}
+zip.dt <- data.table::fread(file=destfile)
+dim(zip.dt)
+zip.label.col.i <- 1
+zip.no.label <- as.matrix(
+  zip.dt[, -zip.label.col.i, with=FALSE])
+n.digits <- 100
+obs.i.vec <- 1:n.digits
+X.mat <- zip.no.label[obs.i.vec, ]
+
 ## 1. MNIST scatterplot of digit labels on first two pca directions (all
 ## classes).
 if(file.exists("figure-fashion-mnist-data.rds")){
@@ -38,11 +76,12 @@ str(data.list$digits)
 X.mat.list <- list()
 n.digits <- 100
 obs.i.vec <- 1:n.digits
+y.vec <- data.list$digits$train$y[obs.i.vec]
 X.mat <- matrix(
   data.list$digits$train$x[obs.i.vec, , ],
   n.digits)
 image_mat_to_dt <- function(X, n.pixels=28){
-  X.t <- t(X)
+  X.t <- t(as.matrix(X))
   data.table(
     digit.i=as.integer(col(X.t)),
     intensity=as.numeric(X.t),
@@ -52,14 +91,13 @@ image_mat_to_dt <- function(X, n.pixels=28){
 tile.dt <- image_mat_to_dt(X.mat)
 intensity.scale <- scale_fill_gradient2(
   mid="black", high="white", low="red", limits=c(NA, 255))
-gg.mnist <- ggplot()+
+ggplot()+
   intensity.scale+
   geom_raster(aes(
     col, -row, fill=intensity),
     data=tile.dt)+
   coord_equal()+
   facet_wrap("digit.i", ncol=15)
-gg.mnist
 ```
 
 ---
@@ -75,19 +113,56 @@ gg.mnist
 
 ---
 
-# Background/motivation: dimensionality reduction
+# Background/motivation: non-linear dimensionality reduction
 
 - High dimensional data are difficult to visualize.
 - For example each observation/example in the MNIST data is of dimension
   28 x 28 = 784 pixels.
 - We would like to map each observation into a lower-dimensional
   space for visualization / understanding patterns in the data.
+- Principal Components Analysis (PCA) is a linear dimensionality
+  reduction algorithm.
+- Auto-encoders are non-linear, which means they can be more accurate
+  than PCA, in terms of reconstruction error.
   
+---
+
+# Auto-encoders are a type of neural network
+
+- A neural network with $L$ layers is a function $f(x)=f_{L-1}[ ... f_1(x) ]$.
+- Each function $f_l(z)=\sigma_l(W_l z)$ consists of multiplication by
+  a matrix $W_l$ followed by an activation function $\sigma_l$.
+- The number of layers $L$, the sizes of the weight matrices $W_l$,
+  and the activation functions $\sigma_l$ are all hyper-parameters
+  that must be chosen prior to learning.
+- Number of units/features in each layer determines weight matrix
+  sizes.
+- Auto-encoders have a middle "code" layer which is the low
+  dimensional embedding.
+  
+---
+
+# Auto-encoder learning algorithm
+
+- The goal of learning is to find a low dimensional mapping of the
+  data which is able to reconstruct the original data.
+- The values in the weight matrices $W_l$ are the model parameters
+  which are learned using gradient descent.
+- The gradient descent learning algorithm starts with arbitrary/random
+  weight matrices $W_l$ close to zero.
+- Each iteration of gradient descent updates the weight matrices $W_l$
+  in order to get better predictions (lower mean squared
+  reconstruction error).
+- The batch size is the number of observations for which the gradient
+  is computed and summed during each iteration.
+- An "epoch" involves one or more gradient descent iterations
+  (computes gradient with respect to each observation once).
+
 ---
   
 # Example: 2d iris data
 
-- Simpler example: iris.
+- Simple example: iris.
 - One row for each flower (only 6 of 150 shown below).
 - One column for each measurement/dimension.
 
@@ -112,27 +187,22 @@ gg
 
 ---
 
-# Project 2d data onto 1d subspace (line)
+# Auto-encoder neural network architecture
+
+- In this example the number of units in each layer is (2, 1, 2).
+- Input/output layers have two units.
+- Code layer has one unit.
+- Linear activation function, so same model as PCA: low-dimensional
+  embedding is a linear combination of input features.
+- Learning algorithm iteratively searches for best linear model.
+
+---
+
+# Visualization of predicted values
 
 ```{r}
-##library(checkpoint)
-##checkpoint("2020-11-01")
-library(keras)
-## from https://github.com/rstudio/keras/issues/937
-if(FALSE){
-  install.packages("keras")
-  keras::install_keras(version = "2.1.6", tensorflow = "1.5")
-  ## https://anaconda.org/conda-forge/tensorflow/files?version=1.5.0
-  system("conda activate r-reticulate && conda install keras=2.1.6 tensorflow=1.5.0 -c conda-forge")
-  system("conda install python=3.6")
-  ##/home/tdhock/.local/share/r-miniconda/envs/r-reticulate/lib/python3.6/site-packages/keras/_
-  install.packages("../keras_2.3.0.0.tar.gz", repo=NULL)
-}
-keras::use_implementation("keras")
-keras::use_backend("tensorflow")
-
 n.input.output <- ncol(i.df)
-model <- keras::keras_model_sequential() %>%
+i.model <- keras::keras_model_sequential() %>%
   keras::layer_dense(
     name="code",
     input_shape = n.input.output,
@@ -140,8 +210,8 @@ model <- keras::keras_model_sequential() %>%
     activation = activation_linear) %>%
   keras::layer_dense(
     units = n.input.output)
-compiled.model <- keras::compile(
-  model,
+i.compiled.model <- keras::compile(
+  i.model,
   optimizer=keras::optimizer_sgd(lr=0.01),
   loss=keras::loss_mean_squared_error)
 i.mat <- as.matrix(i.df)
@@ -149,30 +219,37 @@ i.prcomp <- prcomp(i.mat, rank=1)
 i.pred.prcomp <- with(i.prcomp, matrix(
   center, nrow(i.mat), ncol(i.mat), byrow=TRUE) + x %*% t(rotation))
 i.err.prcomp <- mean((i.pred.prcomp - i.mat)^2)
-epoch.pred.list <- list()
-epoch.loss.list <- list()
-i.err.nn <- Inf
-epoch <- 0
-while(i.err.nn > i.err.prcomp*1.05){
-  epoch <- epoch+1
-  fit.model <- keras::fit(
-    compiled.model, x=i.mat, y=i.mat,
-    epochs=1,
-    verbose=0)
-  i.err.nn <- fit.model[["metrics"]][["loss"]]
-  epoch.loss.list[[epoch]] <- data.table(epoch, loss=i.err.nn)
-  pred.mat <- predict(compiled.model, i.mat)#last layer.
-  pred.dt <- data.table(pred.mat)
-  setnames(pred.dt, names(i.df))
-  epoch.pred.list[[epoch]] <- data.table(epoch, pred.dt)
+i.cache.rds <- "13-auto-encoders-iris-results.rds"
+if(file.exists(i.cache.rds)){
+  iris.results <- readRDS(i.cache.rds)
+}else{
+  epoch.pred.list <- list()
+  epoch.loss.list <- list()
+  i.err.nn <- Inf
+  epoch <- 0
+  while(i.err.nn > i.err.prcomp*1.05){
+    epoch <- epoch+1
+    fit.history <- keras::fit(
+      i.compiled.model, x=i.mat, y=i.mat,
+      epochs=1,
+      verbose=0)
+    i.err.nn <- fit.history[["metrics"]][["loss"]]
+    epoch.loss.list[[epoch]] <- data.table(epoch, loss=i.err.nn)
+    pred.mat <- predict(i.compiled.model, i.mat)#last layer.
+    pred.dt <- data.table(pred.mat)
+    setnames(pred.dt, names(i.df))
+    epoch.pred.list[[epoch]] <- data.table(epoch, pred.dt)
+  }
+  epoch.pred <- do.call(rbind, epoch.pred.list)
+  epoch.loss <- do.call(rbind, epoch.loss.list)
+  iris.results <- list(
+    pred=epoch.pred,
+    loss=epoch.loss,
+    model=i.compiled.model)
+  saveRDS(iris.results, i.cache.rds)
 }
-epoch.pred <- do.call(rbind, epoch.pred.list)
-epoch.loss <- do.call(rbind, epoch.loss.list)
 
 pca.hline <- data.table(loss=i.err.prcomp)
-algo.colors <- c(
-  SGD="blue",
-  SVD="red")
 lambda.intercept <-
   -i.prcomp$center[["Petal.Length"]]/i.prcomp$rotation["Petal.Length",]
 abline.dt <- data.table(
@@ -228,7 +305,6 @@ pca.epoch.plot <- function(show.epoch){
       shape=1,
       data=data.table(show.pred, algorithm="SGD"))
 }
-
 
 pca.epoch.plot(1)
 ```
@@ -329,66 +405,230 @@ gg
 
 ---
 
-# Visualization of predicted values
+# Actual image data
 
 ```{r}
-
-n.intermediate <- 10
-n.code.units <- 2
-my_activation <- activation_sigmoid
+X.sc <- X.mat/255
+X.prcomp <- prcomp(X.sc, rank=2)
+X.pred.prcomp <- with(X.prcomp, matrix(
+  center, nrow(X.sc), ncol(X.sc), byrow=TRUE) + x %*% t(rotation))
+X.err.prcomp <- mean((X.pred.prcomp - X.sc)^2)
+n.input.output <- ncol(X.sc)
+n.intermediate <- 100
+my_activation <- activation_relu
 model <- keras::keras_model_sequential() %>%
   keras::layer_dense(
-    name="int1",
+    name="intermediate_1",
     input_shape = n.input.output,
     units = n.intermediate, 
     activation = my_activation) %>%
   keras::layer_dense(
     name="code",
-    units = n.code.units, 
+    units = 2,
     activation = my_activation) %>%
   keras::layer_dense(
-    name="int2",
+    name="intermediate_2",
     units = n.intermediate, 
     activation = my_activation) %>%
   keras::layer_dense(
     units = n.input.output,
     activation = my_activation)
 
-epoch.pred.list <- list()
-epoch.loss.list <- list()
-i.err.nn <- Inf
-epoch <- 0
-while(i.err.nn > i.err.prcomp*1.05){
-  epoch <- epoch+1
-  fit.model <- keras::fit(
-    compiled.model, x=i.mat, y=i.mat,
-    epochs=1,
-    verbose=0)
-  i.err.nn <- fit.model[["metrics"]][["loss"]]
-  epoch.loss.list[[epoch]] <- data.table(epoch, loss=i.err.nn)
-  pred.mat <- predict(compiled.model, i.mat)#last layer.
-  pred.dt <- data.table(pred.mat)
-  setnames(pred.dt, names(i.df))
-  epoch.pred.list[[epoch]] <- data.table(epoch, pred.dt)
+m.cache.rds <- "13-auto-encoders-mnist-results.rds"
+if(file.exists(m.cache.rds)){
+  mnist.results <- readRDS(m.cache.rds)
+}else{
+  compiled.model <- keras::compile(
+    model,
+    optimizer=keras::optimizer_sgd(
+      lr=1),
+    loss=keras::loss_mean_squared_error)
+  epoch.pred.list <- list()
+  epoch.loss.list <- list()
+  X.err.nn <- Inf
+  epoch <- 0
+  while(X.err.nn > X.err.prcomp*0.85){
+    epoch <- epoch+1
+    if(X.err.nn < X.err.prcomp*1.1){
+      compiled.model <- keras::compile(
+        compiled.model,
+        optimizer=keras::optimizer_adam(),
+        loss=keras::loss_mean_squared_error)
+    }
+    fit.model <- keras::fit(
+      compiled.model, x=X.sc, y=X.sc,
+      epochs=1,
+      verbose=0)
+    X.err.nn <- fit.model[["metrics"]][["loss"]]
+    cat(sprintf(
+      "epoch=%d NN.err=%f PCA.err=%f\n", epoch, X.err.nn, X.err.prcomp))
+    epoch.loss.list[[epoch]] <- data.table(epoch, loss=X.err.nn)
+    pred.mat <- predict(compiled.model, X.sc)#last layer.
+    pred.dt <- data.table(pred.mat)
+    if(epoch %% 100 == 1){
+      epoch.pred.list[[epoch]] <- data.table(epoch, pred.dt)
+    }
+  }
+  epoch.pred <- do.call(rbind, epoch.pred.list)
+  epoch.loss <- do.call(rbind, epoch.loss.list)
+  code_layer_model <- keras::keras_model(
+    inputs = compiled.model$input,
+    outputs = keras::get_layer(compiled.model, "code")$output)
+  code_mat <- predict(intermediate_layer_model, X.mat)
+  mnist.results <- list(
+    code=code_mat,
+    model=compiled.model,
+    pred=epoch.pred,
+    loss=epoch.loss)
+  saveRDS(mnist.results, "13-auto-encoders-mnist-results.rds")
 }
-epoch.pred <- do.call(rbind, epoch.pred.list)
-epoch.loss <- do.call(rbind, epoch.loss.list)
+reconstructed.images(X.sc, "Scaled images")
+```
 
+---
 
+# Auto-encoder for image data
 
-intermediate_layer_model <- keras::keras_model(
-  inputs = compiled.model$input,
-  outputs = keras::get_layer(compiled.model, "code")$output)
-intermediate_output <- predict(intermediate_layer_model, i.mat)
+- Each image is represented by a vector of 784 pixel intensity values,
+  so this is the number of units in the first/last layer.
+- The code layer will have 2 units for visualization purposes (two
+  axes on a scatterplot).
+- There is a choice of the number of intermediate layers; here we
+  choose one layer with 100 units (on each side of the code layer).
+- Overall model architecture, in terms of number of units/features per
+  layer, is (784,100,2,100,784).
+- To compute low-dimensional embedding for an image $x$ we compute:
 
+$$ f_2[f_1(x)] = \sigma_2[ W_2 \sigma_1( W_1 x ) ]. $$
+
+---
+
+# Reconstruction improves with epochs of learning
+
+```{r}
+images.at.epoch(1)
+```
+
+---
+
+# Reconstruction improves with epochs of learning
+
+```{r}
+images.at.epoch(101)
+```
+
+---
+
+# Reconstruction improves with epochs of learning
+
+```{r}
+images.at.epoch(1001)
+```
+
+---
+
+# Reconstruction improves with epochs of learning
+
+```{r}
+images.at.epoch(2001)
+```
+
+---
+
+# Reconstruction improves with epochs of learning
+
+```{r}
+images.at.epoch(3001)
+```
+
+---
+
+# Reconstruction improves with epochs of learning
+
+```{r}
+images.at.epoch(4001)
+```
+
+---
+
+# Reconstruction of PCA
+
+```{r}
+reconstructed.images(X.pred.prcomp, paste0("PCA MSE=", X.err.prcomp))
+```
+
+---
+
+# Loss versus number of epochs
+
+```{r}
+pca.hline <- data.table(loss=X.err.prcomp)
+epoch.vlines <- data.table(
+  epoch=c(1, 101, 1001, 2001, 3001, 4001))
+ggplot()+
+  geom_vline(aes(
+    xintercept=epoch),
+    data=epoch.vlines,
+    color="grey")+
+  scale_color_manual(values=model.colors)+
+  geom_hline(aes(
+    yintercept=loss,
+    color=model),
+    data=data.table(pca.hline, model="PCA"))+
+  scale_y_log10()+
+  geom_point(aes(
+    epoch, loss, color=model),
+    shape=1,
+    data=data.table(mnist.results$loss, model="Auto-encoder"))
+```
+
+---
+
+# Plot code layer variables instead of PCs
+
+```{r}
+intensity.range <- range(mnist.results$pred[,-1], X.pred.prcomp)
+grad.n.vec <- scales::rescale(c(
+  red=intensity.range[1],
+  black=0,
+  white=1,
+  blue=intensity.range[2]))
+reconstructed.images <- function(pred.dt, tit){
+  tile.dt <- image_mat_to_dt(pred.dt)
+  tile.dt[, label := y.vec[digit.i] ]
+  tile.dt[, digit.label := paste0(digit.i, "_", y.vec[digit.i])]
+  ggplot()+
+    ggtitle(tit)+
+    geom_raster(aes(
+      col, -row, fill=intensity),
+      data=tile.dt)+
+    coord_equal()+
+    scale_fill_gradientn(
+      colours=names(grad.n.vec),
+      limits=intensity.range,
+      values=grad.n.vec)+
+    facet_wrap(~ digit.i + label, ncol=20)
+}
+images.at.epoch <- function(e){
+  reconstructed.images(
+    mnist.results$pred[epoch==e,-1],
+    mnist.results$loss[epoch==e, sprintf(
+    "epoch=%d MSE=%.4f", e, loss)])
+}
+code.dt <- data.table(code=mnist.results$code, label=factor(y.vec))
+ggplot()+
+  geom_text(aes(
+    code.V1, code.V2, label=label),
+    data=code.dt)
 ```
 
 ---
 
 # Possible exam questions
 
-- When is the max number of principal components equal to the number
-  of rows of the data matrix?
-- When is the max number of principal components equal to the number
-  of columns of the data matrix?
-
+- What choices do you need to make in the auto-encoder in order to
+  have the result be the same as PCA?
+- What is the total number of parameters for an auto-encoder of a data
+  set with $p=100$ features, if we use 2 code units and 10
+  intermediate units? (assume only weight matrices, no bias/intercept
+  to learn)

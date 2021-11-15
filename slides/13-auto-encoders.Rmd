@@ -121,7 +121,8 @@ ggplot()+
 - We would like to map each observation into a lower-dimensional
   space for visualization / understanding patterns in the data.
 - Principal Components Analysis (PCA) is a linear dimensionality
-  reduction algorithm.
+  reduction method, which is computed using the Singular Value
+  Decomposition (SVD).
 - Auto-encoders are non-linear, which means they can be more accurate
   than PCA, in terms of reconstruction error.
   
@@ -136,9 +137,14 @@ ggplot()+
   and the activation functions $\sigma_l$ are all hyper-parameters
   that must be chosen prior to learning.
 - Number of units/features in each layer determines weight matrix
-  sizes.
+  sizes. To compute $u_{l+1}$ units from $u_{l}$ units the $W_l$
+  matrix must be of size $u_{l+1}\times u_l$.
+- The name "auto" is not an abbreviation of automatic; it means that
+  the input feature vector $x$ is also used as the output.
 - Auto-encoders have a middle "code" layer which is the low
-  dimensional embedding.
+  dimensional embedding (typically size 2 for visualization), and
+  intermediate layer sizes are typically symmetric, for example $L=5$
+  layers for a data set with $p=100$ features (100,50,2,50,100).
   
 ---
 
@@ -148,7 +154,7 @@ ggplot()+
 - relu: $\sigma(z) = z\text{ if }z\geq 0\text{ else } 0$.
 - sigmoid: $\sigma(z) = 1/(1+e^{-z})$.
 
-```{r}
+```{r fig.height=5}
 input <- seq(-3, 3, by=0.1)
 fun.list <- list(
   linear=identity,
@@ -176,18 +182,36 @@ ggplot()+
 
 - The goal of learning is to find a low dimensional mapping of the
   data which is able to reconstruct the original data.
+- This is measured by the mean squared reconstruction error,
+  $\text{MSE}(f) = \sum_{i=1}^n [f(x_i) - x_i]^2.$
 - The values in the weight matrices $W_l$ are the model parameters
-  which are learned using gradient descent.
-- The gradient descent learning algorithm starts with arbitrary/random
-  weight matrices $W_l$ close to zero.
-- Each iteration of gradient descent updates the weight matrices $W_l$
-  in order to get better predictions (lower mean squared
-  reconstruction error).
-- The batch size is the number of observations for which the gradient
-  is computed and summed during each iteration.
+  which are learned using the Stochastic Gradient Descent (SGD)
+  algorithm.
+- Each iteration of SGD updates the weight matrices $W_l$ in order to
+  get better predictions (reduce MSE).
+- The batch size hyper-parameter is the number of observations for
+  which the MSE and its gradient are computed and summed during each
+  iteration (step or update to weight matrices).
 - An "epoch" involves one or more gradient descent iterations
   (computes gradient with respect to each observation once).
+  
+---
 
+# Details of Stochastic Gradient Descent (SGD)
+
+- The algorithm starts with
+  arbitrary/random weight matrices $W_l$ close to zero.
+- The update (one step/iteration) is $W\gets W - \alpha G$ where $W$
+  are the weights, $\alpha>0$ is a learning rate/step size
+  hyper-parameter, and $G$ is the gradient.
+- The gradient is the direction of steepest descent, so the loss/MSE
+  is guaranteed to decrease if the step size is small enough.
+- But if the step size is too small, then many iterations are required
+  to get a small loss/MSE (too slow).
+- If step size is too big, then loss/MSE can increase, so you want to
+  choose an intermediate step size; best step size depends on the
+  problem and data.
+  
 ---
   
 # Example: 2d iris data
@@ -219,9 +243,11 @@ gg
 
 # Auto-encoder neural network architecture
 
-- In this example the number of units in each layer is (2, 1, 2).
+- In the following example the number of units in each layer is (2, 1, 2).
 - Input/output layers have two units.
 - Code layer has one unit.
+- First function has two weights $W_1\in\mathbb R^{1\times 2}$.
+- Second function has two weights $W_2\in\mathbb R^{2\times 1}$.
 - Linear activation function, so same model as PCA: low-dimensional
   embedding is a linear combination of input features.
 - Learning algorithm iteratively searches for best linear model.
@@ -288,13 +314,13 @@ abline.dt <- data.table(
     lambda.intercept*i.prcomp$rotation["Sepal.Width",],
   slope=i.prcomp$rotation["Sepal.Width",]/i.prcomp$rotation["Petal.Length",])
 range.dt <- rbind(
-  epoch.pred[, colnames(i.mat), with=FALSE], i.mat
+  iris.results$pred[, colnames(i.mat), with=FALSE], i.mat
 )[, lapply(.SD, range)]
 pca.epoch.plot <- function(show.epoch){
   text.dt <- rbind(
-    data.table(algorithm="SGD", epoch.loss[show.epoch, .(loss)]),
+    data.table(algorithm="SGD", iris.results$loss[show.epoch, .(loss)]),
     data.table(algorithm="SVD", loss=i.err.prcomp))
-  show.pred <- epoch.pred[epoch==show.epoch]
+  show.pred <- iris.results$pred[epoch==show.epoch]
   show.segs <- data.table(pred=show.pred, data=i.mat)
   ggplot()+
     ggtitle(paste0("Epoch=", show.epoch))+
@@ -392,7 +418,7 @@ pca.epoch.plot(200)
 # Visualization of predicted values
 
 ```{r}
-pca.epoch.plot(nrow(epoch.loss))
+pca.epoch.plot(nrow(iris.results$loss))
 ```
 
 ---
@@ -410,7 +436,7 @@ gg <- ggplot()+
   geom_point(aes(
     epoch, loss, color=algorithm),
     shape=1,
-    data=data.table(epoch.loss, algorithm="SGD"))
+    data=data.table(iris.results$loss, algorithm="SGD"))
 gg
 ```
 
@@ -429,7 +455,7 @@ gg <- ggplot()+
   geom_point(aes(
     epoch, loss, color=algorithm),
     shape=1,
-    data=data.table(epoch.loss, algorithm="SGD")[seq(.N-100, .N)])
+    data=data.table(iris.results$loss, algorithm="SGD")[seq(.N-100, .N)])
 gg
 ```
 
@@ -512,6 +538,34 @@ if(file.exists(m.cache.rds)){
     loss=epoch.loss)
   saveRDS(mnist.results, "13-auto-encoders-mnist-results.rds")
 }
+intensity.range <- range(mnist.results$pred[,-1], X.pred.prcomp)
+grad.n.vec <- scales::rescale(c(
+  red=intensity.range[1],
+  black=0,
+  white=1,
+  blue=intensity.range[2]))
+reconstructed.images <- function(pred.dt, tit){
+  tile.dt <- image_mat_to_dt(pred.dt)
+  tile.dt[, label := y.vec[digit.i] ]
+  tile.dt[, digit.label := paste0(digit.i, "_", y.vec[digit.i])]
+  ggplot()+
+    ggtitle(tit)+
+    geom_raster(aes(
+      col, -row, fill=intensity),
+      data=tile.dt)+
+    coord_equal()+
+    scale_fill_gradientn(
+      colours=names(grad.n.vec),
+      limits=intensity.range,
+      values=grad.n.vec)+
+    facet_wrap(~ digit.i + label, ncol=20)
+}
+images.at.epoch <- function(e){
+  reconstructed.images(
+    mnist.results$pred[epoch==e,-1],
+    mnist.results$loss[epoch==e, sprintf(
+    "epoch=%d MSE=%.4f", e, loss)])
+}
 reconstructed.images(X.sc, "Scaled images")
 ```
 
@@ -527,9 +581,11 @@ reconstructed.images(X.sc, "Scaled images")
   choose one layer with 100 units (on each side of the code layer).
 - Overall model architecture, in terms of number of units/features per
   layer, is (784,100,2,100,784).
-- To compute low-dimensional embedding for an image $x$ we compute:
-
-$$ f_2[f_1(x)] = \sigma_2[ W_2 \sigma_1( W_1 x ) ]. $$
+- Weight matrix sizes are therefore
+  $W_1\in\mathbb R^{100\times 784}, W_2\in\mathbb R^{2\times 100}, 
+  W_3\in\mathbb R^{100\times 2}, W_4\in\mathbb R^{784\times 100}$.
+- To low-dimensional embedding for an image $x$ is computed via
+  $f_2[f_1(x)] = \sigma_2[ W_2 \sigma_1( W_1 x ) ].$
 
 ---
 
@@ -617,34 +673,6 @@ ggplot()+
 # Plot code layer variables instead of PCs
 
 ```{r}
-intensity.range <- range(mnist.results$pred[,-1], X.pred.prcomp)
-grad.n.vec <- scales::rescale(c(
-  red=intensity.range[1],
-  black=0,
-  white=1,
-  blue=intensity.range[2]))
-reconstructed.images <- function(pred.dt, tit){
-  tile.dt <- image_mat_to_dt(pred.dt)
-  tile.dt[, label := y.vec[digit.i] ]
-  tile.dt[, digit.label := paste0(digit.i, "_", y.vec[digit.i])]
-  ggplot()+
-    ggtitle(tit)+
-    geom_raster(aes(
-      col, -row, fill=intensity),
-      data=tile.dt)+
-    coord_equal()+
-    scale_fill_gradientn(
-      colours=names(grad.n.vec),
-      limits=intensity.range,
-      values=grad.n.vec)+
-    facet_wrap(~ digit.i + label, ncol=20)
-}
-images.at.epoch <- function(e){
-  reconstructed.images(
-    mnist.results$pred[epoch==e,-1],
-    mnist.results$loss[epoch==e, sprintf(
-    "epoch=%d MSE=%.4f", e, loss)])
-}
 code.dt <- data.table(code=mnist.results$code, label=factor(y.vec))
 ggplot()+
   geom_text(aes(

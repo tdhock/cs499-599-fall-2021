@@ -128,7 +128,7 @@ ggplot()+
   
 ---
 
-# Auto-encoders are a type of neural network
+# Deep neural networks
 
 - A neural network with $L$ layers is a function $f(x)=f_{L-1}[ ... f_1(x) ]$.
 - Each function $f_l(z)=\sigma_l(W_l z)$ consists of multiplication by
@@ -136,15 +136,32 @@ ggplot()+
 - The number of layers $L$, the sizes of the weight matrices $W_l$,
   and the activation functions $\sigma_l$ are all hyper-parameters
   that must be chosen prior to learning.
+- The number of hidden layers is $L-2$ (inputs and outputs are known,
+  other layers are not).
+- When the number of hidden layers is greater than one, we say that
+  the neural network is deep, $L\geq 4$.
 - Number of units/features in each layer determines weight matrix
   sizes. To compute $u_{l+1}$ units from $u_{l}$ units the $W_l$
   matrix must be of size $u_{l+1}\times u_l$.
+- Sometimes called multi-layer perceptron (MLP).
+
+---
+
+# Auto-encoders are a type of neural network
+
 - The name "auto" is not an abbreviation of automatic; it means that
-  the input feature vector $x$ is also used as the output.
+  the input feature vector $x$ (first layer) is also used as the
+  output (last layer).
 - Auto-encoders have a middle "code" layer which is the low
   dimensional embedding (typically size 2 for visualization), and
-  intermediate layer sizes are typically symmetric, for example $L=5$
-  layers for a data set with $p=100$ features (100,50,2,50,100).
+  intermediate layer sizes are typically symmetric.
+- The encoder is the first half of functions (from input to code
+  layer).
+- The decoder is the second half of functions (from code layer to
+  output).
+- Auto-encoders can have shared weights in the encoder and decoder.
+- For example $L=5$ layers for a data set with $p=100$ features the
+  number of units per layer could be (100,50,2,50,100).
   
 ---
 
@@ -183,7 +200,7 @@ ggplot()+
 - The goal of learning is to find a low dimensional mapping of the
   data which is able to reconstruct the original data.
 - This is measured by the mean squared reconstruction error,
-  $\text{MSE}(f) = \sum_{i=1}^n [f(x_i) - x_i]^2.$
+  $\text{MSE}(f) = \frac 1 n \sum_{i=1}^n ||f(x_i) - x_i||_2^2.$
 - The values in the weight matrices $W_l$ are the model parameters
   which are learned using the Stochastic Gradient Descent (SGD)
   algorithm.

@@ -3,8 +3,10 @@ dimensional nonlinear mapping of a high dimensional data set, and
 compare to the PCA linear mapping.
 
 1. first select 100 rows of the zip.train data from the ESL book (10
-   from each class). For these data use the keras R package to define
-   an auto-encoder, using keras::keras_model_sequential and
+   from each class). Or you could use another digit data like the
+   MNIST I used in my slides, but MNIST is larger so the zip data
+   should be easier/faster. For these data use the keras R package to
+   define an auto-encoder, using keras::keras_model_sequential and
    keras::layer_dense(activation="relu" or "sigmoid") for the
    intermediate layers. For visualization purposes make sure the code
    layer has two units. How many parameters are there to learn in this
@@ -31,6 +33,15 @@ compare to the PCA linear mapping.
    geom_point(color=digit) to visualize the different digit
    classes. Which of the two methods results in better separation
    between digit classes?
+
+** FAQ
+
+How to fix tensorflow not found error on windows? try
+
+#+begin_src R
+  remotes::install_github("rstudio/reticulate") #fixes ssl download problem.
+  tensorflow::install_tensorflow() #fixes tensorflow not found problem.
+#+end_src
 
 ** CS599 graduate students only
 

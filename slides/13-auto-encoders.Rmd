@@ -547,7 +547,7 @@ if(file.exists(m.cache.rds)){
   code_layer_model <- keras::keras_model(
     inputs = compiled.model$input,
     outputs = keras::get_layer(compiled.model, "code")$output)
-  code_mat <- predict(intermediate_layer_model, X.mat)
+  code_mat <- predict(code_layer_model, X.mat)
   mnist.results <- list(
     code=code_mat,
     model=compiled.model,

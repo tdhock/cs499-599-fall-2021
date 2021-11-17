@@ -36,12 +36,178 @@ compare to the PCA linear mapping.
 
 ** FAQ
 
-How to fix tensorflow not found error on windows? try
+
+How to fix tensorflow not found error on windows? 
+
+First install https://cloud.r-project.org/bin/windows/Rtools/ which is
+a set of compilers which allows you to build and install R packages
+from source. Next try running these commands in R:
 
 #+begin_src R
   remotes::install_github("rstudio/reticulate") #fixes ssl download problem.
   tensorflow::install_tensorflow() #fixes tensorflow not found problem.
 #+end_src
+
+If you see the output below when you run =install_github= then that
+means the installation failed, because on windows it is not allowed to
+over-write a package that has already been loaded into the current R
+session. 
+
+#+BEGIN_SRC R
+> remotes::install_github("rstudio/reticulate") #fixes ssl download problem.
+Downloading GitHub repo rstudio/reticulate@HEAD
+v  checking for file 'C:\Users\th798\AppData\Local\Temp\Rtmp8UC0mr\remotes1b901f641e63\rstudio-reticulate-dd6d6e8/DESCRIPTION'
+-  preparing 'reticulate': (957ms)
+v  checking DESCRIPTION meta-information
+-  cleaning src
+-  checking for LF line-endings in source and make files and shell scripts
+-  checking for empty or unneeded directories
+-  building 'reticulate_1.22-9000.tar.gz'
+   
+Installing package into 'C:/Users/th798/R/win-library/4.1'
+(as 'lib' is unspecified)
+* installing *source* package 'reticulate' ...
+ERROR: cannot remove earlier installation, is it in use?
+* removing 'C:/Users/th798/R/win-library/4.1/reticulate'
+* restoring previous 'C:/Users/th798/R/win-library/4.1/reticulate'
+Warning in file.copy(lp, dirname(pkgdir), recursive = TRUE, copy.date = TRUE) :
+  problem copying C:\Users\th798\R\win-library\4.1\00LOCK-reticulate\reticulate\libs\x64\reticulate.dll to C:\Users\th798\R\win-library\4.1\reticulate\libs\x64\reticulate.dll: Permission denied
+Warning message:
+In i.p(...) :
+  installation of package 'C:/Users/th798/AppData/Local/Temp/Rtmp8UC0mr/file1b90555b2231/reticulate_1.22-9000.tar.gz' had non-zero exit status
+#+END_SRC
+
+To fix that you need to restart R, and do the installation immediately
+(before loading keras/tensorflow/reticulate). If you do that you
+should see
+
+#+BEGIN_SRC R
+R version 4.1.1 (2021-08-10) -- "Kick Things"
+Copyright (C) 2021 The R Foundation for Statistical Computing
+Platform: x86_64-w64-mingw32/x64 (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> setwd('c:/Users/th798/teaching/cs499-599-fall-2021/homeworks')
+> remotes::install_github("rstudio/reticulate")
+Downloading GitHub repo rstudio/reticulate@HEAD
+v  checking for file 'C:\Users\th798\AppData\Local\Temp\RtmpIVc8SB\remotesa4c4063753b\rstudio-reticulate-dd6d6e8/DESCRIPTION'
+-  preparing 'reticulate': (525ms)
+v  checking DESCRIPTION meta-information
+-  cleaning src
+-  checking for LF line-endings in source and make files and shell scripts
+-  checking for empty or unneeded directories
+-  building 'reticulate_1.22-9000.tar.gz'
+   
+Installing package into 'C:/Users/th798/R/win-library/4.1'
+(as 'lib' is unspecified)
+* installing *source* package 'reticulate' ...
+** using staged installation
+** libs
+"C:/rtools40/mingw64/bin/"g++ -std=gnu++11  -I"c:/PROGRA~1/R/R-41~1.1/include" -DNDEBUG  -I'C:/Users/th798/R/win-library/4.1/Rcpp/include'        -O2 -Wall  -mfpmath=sse -msse2 -mstackrealign  -c RcppExports.cpp -o RcppExports.o
+"C:/rtools40/mingw64/bin/"g++ -std=gnu++11  -I"c:/PROGRA~1/R/R-41~1.1/include" -DNDEBUG  -I'C:/Users/th798/R/win-library/4.1/Rcpp/include'        -O2 -Wall  -mfpmath=sse -msse2 -mstackrealign  -c event_loop.cpp -o event_loop.o
+"C:/rtools40/mingw64/bin/"g++ -std=gnu++11  -I"c:/PROGRA~1/R/R-41~1.1/include" -DNDEBUG  -I'C:/Users/th798/R/win-library/4.1/Rcpp/include'        -O2 -Wall  -mfpmath=sse -msse2 -mstackrealign  -c libpython.cpp -o libpython.o
+"C:/rtools40/mingw64/bin/"g++ -std=gnu++11  -I"c:/PROGRA~1/R/R-41~1.1/include" -DNDEBUG  -I'C:/Users/th798/R/win-library/4.1/Rcpp/include'        -O2 -Wall  -mfpmath=sse -msse2 -mstackrealign  -c output.cpp -o output.o
+"C:/rtools40/mingw64/bin/"g++ -std=gnu++11  -I"c:/PROGRA~1/R/R-41~1.1/include" -DNDEBUG  -I'C:/Users/th798/R/win-library/4.1/Rcpp/include'        -O2 -Wall  -mfpmath=sse -msse2 -mstackrealign  -c python.cpp -o python.o
+"C:/rtools40/mingw64/bin/"g++ -std=gnu++11  -I"c:/PROGRA~1/R/R-41~1.1/include" -DNDEBUG  -I'C:/Users/th798/R/win-library/4.1/Rcpp/include'        -O2 -Wall  -mfpmath=sse -msse2 -mstackrealign  -c readline.cpp -o readline.o
+"C:/rtools40/mingw64/bin/"g++ -std=gnu++11  -I"c:/PROGRA~1/R/R-41~1.1/include" -DNDEBUG  -I'C:/Users/th798/R/win-library/4.1/Rcpp/include'        -O2 -Wall  -mfpmath=sse -msse2 -mstackrealign  -c signals.cpp -o signals.o
+C:/rtools40/mingw64/bin/g++ -std=gnu++11 -shared -s -static-libgcc -o reticulate.dll tmp.def RcppExports.o event_loop.o libpython.o output.o python.o readline.o signals.o -Lc:/PROGRA~1/R/R-41~1.1/bin/x64 -lR
+installing to C:/Users/th798/R/win-library/4.1/00LOCK-reticulate/00new/reticulate/libs/x64
+** R
+** inst
+** byte-compile and prepare package for lazy loading
+** help
+*** installing help indices
+  converting help for package 'reticulate'
+    finding HTML links ... done
+    PyClass                                 html  
+    array_reshape                           html  
+    as.character.python.builtin.bytes       html  
+    conda-tools                             html  
+    configure_environment                   html  
+    dict                                    html  
+    eng_python                              html  
+    import                                  html  
+    install_miniconda                       html  
+    install_python                          html  
+    iterate                                 html  
+    miniconda_path                          html  
+    miniconda_update                        html  
+    np_array                                html  
+    py                                      html  
+    py_available                            html  
+    py_call                                 html  
+    py_capture_output                       html  
+    py_config                               html  
+    py_config_error_message                 html  
+    py_del_attr                             html  
+    py_del_item                             html  
+    py_discover_config                      html  
+    py_ellipsis                             html  
+    py_eval                                 html  
+    py_exe                                  html  
+    py_func                                 html  
+    py_function_custom_scaffold             html  
+    py_function_wrapper                     html  
+    py_get_attr                             html  
+    py_get_item                             html  
+    py_has_attr                             html  
+    py_help                                 html  
+    py_help_handler                         html  
+    py_id                                   html  
+    py_install                              html  
+    py_is_null_xptr                         html  
+    py_iterator                             html  
+    py_last_error                           html  
+    py_len                                  html  
+    py_list_attributes                      html  
+    py_main_thread_func                     html  
+    py_module_available                     html  
+    py_none                                 html  
+    py_run                                  html  
+    py_save_object                          html  
+    py_set_attr                             html  
+    py_set_item                             html  
+    py_set_seed                             html  
+    py_str                                  html  
+    py_suppress_warnings                    html  
+    py_to_r_wrapper                         html  
+    py_unicode                              html  
+    py_version                              html  
+    py_versions_windows                     html  
+    r-py-conversion                         html  
+    register_class_filter                   html  
+    register_help_topics                    html  
+    register_module_help_handler            html  
+    register_suppress_warnings_handler      html  
+    repl_python                             html  
+    reticulate                              html  
+    source_python                           html  
+    tuple                                   html  
+    use_python                              html  
+    virtualenv-tools                        html  
+    with-as-operator                        html  
+    with.python.builtin.object              html  
+** building package indices
+** installing vignettes
+** testing if installed package can be loaded from temporary location
+** testing if installed package can be loaded from final location
+** testing if installed package keeps a record of temporary installation path
+* DONE (reticulate)
+#+END_SRC
+
 
 ** CS599 graduate students only
 

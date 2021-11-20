@@ -139,8 +139,7 @@ that week, 11:59PM.
     MLAPP-28.3.2. MLAPP-28.4.2 to 28.4.3.
   - Quizzes Autoencoders 1-3.
 - Nov 22, Thanksgiving 11/25-26. Homework week 14. 
-  - [[file:slides/14-other-dimensionality-reduction.pdf][Slides]], Reading: [[https://cloud.r-project.org/web/packages/dimRed/vignettes/dimensionality-reduction.pdf][dimRed vignette]], Quiz other dimensionality
-    reduction.
+  - [[file:slides/14-other-dimensionality-reduction.pdf][Slides]], Reading: [[https://cloud.r-project.org/web/packages/dimRed/vignettes/dimensionality-reduction.pdf][dimRed vignette]], no quiz.
 - Nov 29, Reading week, [[file:homeworks/Rpkg.org][CS599 grad student extra credit R package
   coding project 3 due (this project is not required; you only have to
   do this if you want extra credit points)]].

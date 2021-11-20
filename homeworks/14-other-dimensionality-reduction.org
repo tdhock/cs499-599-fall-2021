@@ -1,0 +1,28 @@
+The goal of this homework is to get experience interpreting and
+evaluating the quality of some other dimensionality reduction
+algorithms.
+
+1. first select 100 rows of the zip.train data from the ESL book (10
+   from each class), and save the resulting inputs in a matrix, and
+   the class/labels (first column) in a vector.
+
+2. Write a for loop over three different dimensionality reduction
+   methods implemented in the dimRed R package. In each iteration you
+   should use dimRed::embed to compute the low-dimensional embedding
+   using one of those method for your input matrix. During each
+   iteration save the low dimensional embedding in a data table, then
+   after the for loop combine all of the data tables into a single
+   data table for plotting. Make a ggplot which shows the two
+   embedding dimensions on the x/y axes, the different class/labels as
+   different numbers (geom_text), and the different methods in
+   different panels (facet_grid). Which of the three methods appears
+   to separate the class labels the best, in your opinion?
+
+3. Choose three different quality scores implemented in the dimRed R
+   package. For each quality score and embedding method, compute the
+   quality score and save it in a matrix (rows for methods, columns
+   for scores). Make sure the matrix has row and column names, then
+   print it out. For each quality score, which method is best?
+
+For the CS599 grad students, no extra assignment this week. For extra
+credit, you may start a third [[file:Rpkg.org][R package coding project]].

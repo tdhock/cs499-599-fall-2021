@@ -1,0 +1,313 @@
+---
+title: "Other dimensionality reduction algorithms"
+author: "Toby Dylan Hocking"
+output: beamer_presentation
+---
+
+```{r opts, echo=FALSE}
+knitr::opts_chunk$set(
+  echo=FALSE, results=FALSE,
+  fig.width=10,
+  fig.height=7)
+options(width=60)
+algo.colors <- c(
+  SGD="blue",
+  SVD="red")
+model.colors <- structure(algo.colors, names=c("Auto-encoder", "PCA"))
+suppressPackageStartupMessages({
+  if(!requireNamespace("R.utils")){
+    install.packages("R.utils")
+  }
+  library(data.table)
+  library(ggplot2)
+  library(dimRed)
+})
+text.size <- 5
+theme_set(
+  theme_bw()+
+    theme(
+      panel.spacing=grid::unit(0, "lines"),
+      text=element_text(size=20)))
+```
+
+# Motivation: MNIST digits data
+
+```{r}
+destfile <- "zip.train.gz"
+datasets.url <-
+  "https://web.stanford.edu/~hastie/ElemStatLearn/datasets/"
+if(!file.exists(destfile)){
+  zip.url <- paste0(datasets.url, destfile)
+  download.file(zip.url, destfile)
+}
+zip.dt <- data.table::fread(file=destfile)
+dim(zip.dt)
+zip.label.col.i <- 1
+zip.no.label <- as.matrix(
+  zip.dt[, -zip.label.col.i, with=FALSE])
+n.digits <- 100
+obs.i.vec <- 1:n.digits
+X.mat <- zip.no.label[obs.i.vec, ]
+## 1. MNIST scatterplot of digit labels on first two pca directions (all
+## classes).
+if(file.exists("figure-fashion-mnist-data.rds")){
+  data.list <- readRDS("figure-fashion-mnist-data.rds")
+}else{
+  data.list <- list(
+    fashion=keras::dataset_fashion_mnist(),
+    digits=keras::dataset_mnist())
+  saveRDS(data.list, "figure-fashion-mnist-data.rds")
+}
+str(data.list$digits)
+X.mat.list <- list()
+n.digits <- 100
+obs.i.vec <- 1:n.digits
+y.vec <- data.list$digits$train$y[obs.i.vec]
+X.mat <- matrix(
+  as.numeric(data.list$digits$train$x[obs.i.vec, , ]),
+  n.digits)
+image_mat_to_dt <- function(X, n.pixels=sqrt(ncol(X.mat))){
+  X.t <- t(as.matrix(X))
+  data.table(
+    digit.i=as.integer(col(X.t)),
+    intensity=as.numeric(X.t),
+    row=rep(1:n.pixels, n.pixels),
+    col=rep(1:n.pixels, each=n.pixels))
+}
+tile.dt <- image_mat_to_dt(X.mat)
+intensity.scale <- scale_fill_gradient2(
+  mid="black", high="white", low="red", limits=c(NA, 255))
+ggplot()+
+  intensity.scale+
+  geom_raster(aes(
+    col, -row, fill=intensity),
+    data=tile.dt)+
+  coord_equal()+
+  facet_wrap("digit.i", ncol=15)
+method.names <- c("LLE", "MDS", "Isomap", "tSNE","PCA")
+quality.names <- c("Q_local", "Q_global", "AUC_lnK_R_NX")
+quality.mat <- matrix(
+  NA, length(method.names), length(quality.names),
+  dimnames=list(
+    method=method.names,
+    quality=quality.names))
+get_embed_dt <- function(embed_result){
+  embed_dt <- data.table(embed_result@data@data)
+  setnames(embed_dt, c("dim1", "dim2"))
+  embed_dt
+}
+my_embed <- function(X, method){
+  set.seed(1)
+  suppressMessages({
+    embed_result <- dimRed::embed(X, method)
+  })
+}
+cor.tile.dt.list <- list()
+embed.dt.list <- list()
+for(method in method.names){
+  embed_result <- my_embed(X.mat, method)
+  embed.dt.list[[method]] <- data.table(
+    method,
+    label=factor(y.vec),
+    get_embed_dt(embed_result))
+  co.mat <- coRanking::coranking(X.mat, embed_result@data@data)
+  cor.tile.dt.list[[method]] <- data.table(
+    method,
+    count=as.integer(co.mat),
+    original.rank=as.integer(row(co.mat)),
+    new.rank=as.integer(col(co.mat)))
+  for(q.name in quality.names){
+    q.value <- dimRed::quality(embed_result, q.name)
+    quality.mat[method,q.name] <- q.value
+  }      
+}
+cor.tile.dt <- do.call(rbind, cor.tile.dt.list)
+embed.dt <- do.call(rbind, embed.dt.list)
+mnist.method <- function(m){
+  e.dt <- embed.dt[method==m]
+  ggplot()+
+    ggtitle(paste("Algorithm:", m))+
+    geom_text(aes(
+      dim1, dim2, label=label),
+      data=e.dt)
+}
+```
+
+---
+
+# Set of digits is represented as a matrix
+
+- Each digit image in MNIST data set is a matrix of $28\times 28$
+  pixel intensity values, $x_i\in\{0,\dots,255\}^{784}$.
+- Each of the images is a row in the data matrix.
+- Each of the columns is a pixel.
+- All images on last slide represented by a data matrix with $n=100$
+  rows/images and $p=784$ columns/pixels.
+
+---
+
+# Background/motivation: non-linear dimensionality reduction
+
+- High dimensional data are difficult to visualize.
+- For example each observation/example in the MNIST data is of dimension
+  28 x 28 = 784 pixels.
+- We would like to map each observation into a lower-dimensional
+  space for visualization / understanding patterns in the data.
+- Principal Components Analysis (PCA) is a linear dimensionality
+  reduction method, which is computed using the Singular Value
+  Decomposition (SVD).
+- Auto-encoders are non-linear, which means they can be more accurate
+  than PCA, in terms of reconstruction error.
+- There are other non-linear dimensionality reduction methods.
+  
+---
+
+# List of methods implemented in dimRed R package
+
+- LLE: Local Linear Embedding.
+- MDS: Multi-Dimensional Scaling.
+- tSNE: t-distributed Stochastic Neighbor Embedding.
+
+```{r, echo=TRUE, results=TRUE}
+dimRed::dimRedMethodList()
+```
+
+---
+
+# Comparison of different methods on MNIST data
+
+```{r}
+mnist.method("PCA")
+```
+
+---
+
+# Comparison of different methods on MNIST data
+
+```{r}
+mnist.method("Isomap")
+```
+
+---
+
+# Comparison of different methods on MNIST data
+
+```{r}
+mnist.method("LLE")
+```
+
+---
+
+# Comparison of different methods on MNIST data
+
+```{r}
+mnist.method("MDS")
+```
+
+---
+
+# Comparison of different methods on MNIST data
+
+```{r}
+mnist.method("tSNE")
+```
+
+---
+
+# A toy data set in 3d with a clear 2d subspace
+
+```{r}
+data_set <- dimRed::loadDataSet("3D S Curve", n = 2000)
+plot(data_set, type="3vars")
+```
+
+---
+
+# Scatter plot matrix view of same data
+
+```{r}
+plot(data_set)
+```
+
+---
+
+# Two methods recover different low dimensional embeddings
+
+```{r}
+result.dt.list <- list()
+for(method in c("Isomap","PCA")){
+  embed_result <- my_embed(data_set, method)
+  result.dt.list[[method]] <- data.table(
+    method,
+    get_embed_dt(embed_result),
+    color=dimRed:::colorize(data_set@meta))
+}
+result.dt <- do.call(rbind, result.dt.list)
+
+ggplot()+
+  scale_color_identity()+
+  geom_point(aes(
+    dim1, dim2, color=color),
+    shape=1,
+    data=result.dt)+
+  facet_grid(. ~ method, labeller=label_both, scales="free")
+```
+
+---
+
+# How to evaluate/compare dimensionality reduction methods?
+
+- Mean squared reconstruction error is what we used for PCA and
+  auto-encoders.
+- Whereas PCA and auto-encoders support decoding (function which inputs low
+  dimensional values and returns high dimensional values in original
+  space), many methods do not (LLE, tSNE, MDS).
+- There are various other quality measures which only require the
+  low-dimensional mapping (no need for decoder).
+
+```{r echo=TRUE, results=TRUE}
+dimRed::dimRedQualityList()
+```
+
+---
+
+# Co-ranking matrix
+
+- Many quality scores are based on the co-ranking matrix, which is
+  based on computing rank distance matrices for both the high and low
+  dimensional data, then $q_{ij}$ is how many points of distance rank
+  $j$ became rank $i$.
+- Diagonal co-ranking matrix is perfect, non-zeros in lower/upper triangle
+  indicate points too close/far.
+
+```{r fig.height=5}
+ggplot()+
+  geom_raster(aes(
+    new.rank, original.rank, fill=log10(count)),
+    data=cor.tile.dt)+
+  scale_y_reverse()+
+  scale_fill_gradient(low="white", high="black")+
+  facet_wrap("method", labeller=label_both)+
+  coord_equal()
+```
+
+---
+
+# Comparing quality measures for MNIST
+
+- These three quality scores are all based on co-ranking matrix
+  (larger is better).
+- tSNE method is best for these data.
+- Default hyper-parameters were used for all methods.
+- Better results for each algorithm could be obtained by choosing
+  better hyper-parameters.
+
+```{r results=TRUE}
+quality.mat
+```
+
+---
+
+# Possible exam questions
+
+- TODO

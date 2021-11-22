@@ -1,25 +1,25 @@
 1. A common theme in unsupervised learning algorithms is a goal of
-finding a model with "best fit" to the data. In probabilistic models
-such as Gaussian Mixtures and Hidden Markov models, the goal is
-minimizing the negative log likelihood. In non-probabilistic models
-such as Principal components analysis and k-means the goal is to
-minimize the mean squared error. In general we use the term "loss
-function" to describe the measure of difference between model and data
-(smaller loss values indicate better model fit). In all models there
-is a model size/complexity hyper-parameter which controls the extent
-to which the model can fit the data.
+   finding a model with "best fit" to the data. In probabilistic
+   models such as Gaussian Mixtures and Hidden Markov models, the goal
+   is minimizing the negative log likelihood. In non-probabilistic
+   models such as Principal components analysis and k-means the goal
+   is to minimize the mean squared error. In general we use the term
+   "loss function" to describe the measure of difference between model
+   and data (smaller loss values indicate better model fit). In all
+   models there is a model size/complexity hyper-parameter which
+   controls the extent to which the model can fit the data.
 
-For the four models discussed above, what is the model size
-hyper-parameter?
+    For the four models discussed above, what is the model size
+       hyper-parameter?
 
-Does the loss with respect to the train set increase or decrease as
-model size increases?
+    Does the loss with respect to the train set increase or decrease
+       as model size increases?
 
-Does underfitting happen for large or small model sizes? Why should
-underfitting be avoided?
+    Does underfitting happen for large or small model sizes? Why
+       should underfitting be avoided?
 
-Does overfitting happen for large or small model sizes? Why should
-overfitting be avoided?
+    Does overfitting happen for large or small model sizes? Why should
+       overfitting be avoided?
 
 2. Assume you have a scaled data matrix with N=1000 rows/observations
    and P=500 columns/features, and you want a 2-dimensional embedding
@@ -36,17 +36,18 @@ overfitting be avoided?
 3. Explain in detail the similarities and differences between Gaussian
    Mixture Models and Hidden Markov Models.
 
-What kinds of data are used as inputs?
+    What kinds of data are used as inputs?
 
-What hyper-parameter(s) must be fixed before running the EM algorithm?
+    What hyper-parameter(s) must be fixed before running the EM
+       algorithm?
 
-What are the names and sizes of the model parameters that are learned
-using the EM algorithm?
+    What are the names and sizes of the model parameters that are
+       learned using the EM algorithm?
 
-How many of each parameter are there?
+    How many of each parameter are there?
 
-How do the inference algorithms work? What happens to the parameters
-in the E and M steps?
+    How do the inference algorithms work? What happens to the
+       parameters in the E and M steps?
 
 4. The changepoint algorithms we have studied have very different
    asymptotic time complexity, in terms of number of data in the

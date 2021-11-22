@@ -67,7 +67,7 @@
 Rubric: minus points for incomplete and/or off-topic responses.
 
 Volunteers to present solutions during reading week:
-- CS499: TODO
+- CS499: 2-Hunter.
 - CS599: TODO
 
 For the real final exam (in class at time shown below), what would be

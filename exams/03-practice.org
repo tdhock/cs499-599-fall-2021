@@ -1,0 +1,78 @@
+1. A common theme in unsupervised learning algorithms is a goal of
+finding a model with "best fit" to the data. In probabilistic models
+such as Gaussian Mixtures and Hidden Markov models, the goal is
+minimizing the negative log likelihood. In non-probabilistic models
+such as Principal components analysis and k-means the goal is to
+minimize the mean squared error. In general we use the term "loss
+function" to describe the measure of difference between model and data
+(smaller loss values indicate better model fit). In all models there
+is a model size/complexity hyper-parameter which controls the extent
+to which the model can fit the data.
+
+For the four models discussed above, what is the model size
+hyper-parameter?
+
+Does the loss with respect to the train set increase or decrease as
+model size increases?
+
+Does underfitting happen for large or small model sizes? Why should
+underfitting be avoided?
+
+Does overfitting happen for large or small model sizes? Why should
+overfitting be avoided?
+
+2. Assume you have a scaled data matrix with N=1000 rows/observations
+   and P=500 columns/features, and you want a 2-dimensional embedding
+   to visualize these data on a scatterplot. Consider a fully
+   connected autoencoder with only dense weight matrices (no
+   intercept/bias) and number of units per layer
+   (500,100,10,2,10,100,500). How many parameters are there to infer
+   in the autoencoder, and in a PCA? What algorithms can you use to
+   compute model parameters in PCA and in the autoencoder? After
+   computing the model parameters, how can you use them to compute the
+   low-dimensional embedding of the data for visualization on a
+   scatterplot?
+
+3. Explain in detail the similarities and differences between Gaussian
+   Mixture Models and Hidden Markov Models.
+
+What kinds of data are used as inputs?
+
+What hyper-parameter(s) must be fixed before running the EM algorithm?
+
+What are the names and sizes of the model parameters that are learned
+using the EM algorithm?
+
+How many of each parameter are there?
+
+How do the inference algorithms work? What happens to the parameters
+in the E and M steps?
+
+4. The changepoint algorithms we have studied have very different
+   asymptotic time complexity, in terms of number of data in the
+   sequence N, and number of clusters/states K. For each of the
+   following scenarios, use big O notation to either (1) explain which
+   algorithm would be fastest and mention at least one other algorithm
+   which would be slower, or (2) explain why all algorithms would have
+   similar speed.
+   - large N.
+   - large K.
+
+5. Consider a sequential data set with N=400 data points. To compute
+   the binary segmentation model with 1/2/3/4 changepoints, what is
+   the number of splits for which the loss must be computed? (provide
+   best and worst case analysis)
+   
+Rubric: minus points for incomplete and/or off-topic responses.
+
+Volunteers to present solutions during reading week:
+- CS499: TODO
+- CS599: TODO
+
+For the real final exam (in class at time shown below), what would be
+the analogous questions for the other topics that we have studied?
+- CS599 Thurs Dec 9, 8:00-9:30.
+- CS499 Mon Dec 6, 8:00-9:30.
+ 
+It will be open-note: during the real exam, you are allowed one sheet
+of paper, filled in with your own notes, in your own handwriting.

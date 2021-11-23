@@ -9,7 +9,7 @@ algorithms.
 2. Write a for loop over three different dimensionality reduction
    methods implemented in the dimRed R package. In each iteration you
    should use dimRed::embed to compute the low-dimensional embedding
-   using one of those method for your input matrix. During each
+   using one of those methods for your input matrix. During each
    iteration save the low dimensional embedding in a data table, then
    after the for loop combine all of the data tables into a single
    data table for plotting. Make a ggplot which shows the two

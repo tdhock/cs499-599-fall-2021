@@ -40,7 +40,9 @@ torch::torch_manual_seed(777)
 ## Define neural network architecture, number of units per layer.
 autoencoder <- torch::nn_module(
   "autoencoder",
-  initialize = function(n.input.output=ncol(some.zip.X), n.intermediate=50, n.code=2) {
+  initialize =
+    function(n.input.output=ncol(some.zip.X),
+             n.intermediate=50, n.code=2) {
     self$encoder <- torch::nn_sequential(
       torch::nn_linear(n.input.output, n.intermediate),
       torch::nn_relu(),
@@ -67,7 +69,8 @@ autoencoder <- torch::nn_module(
 
 
 ## dataloader is used to specify batch size.
-train_dl <- torch::dataloader(zip_train, batch_size = 10, shuffle = TRUE)
+train_dl <- torch::dataloader(
+  zip_train, batch_size = 10, shuffle = TRUE)
 
 ## luz package provides high level interface for training, similar to
 ## keras.

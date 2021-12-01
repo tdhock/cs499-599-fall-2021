@@ -8,11 +8,13 @@ compare to the PCA linear mapping.
    should be easier/faster. For these data use the keras R package to
    define an auto-encoder, using keras::keras_model_sequential and
    keras::layer_dense(activation="relu" or "sigmoid") for the
-   intermediate layers. For visualization purposes make sure the code
+   intermediate layers (and linear activation for the last layer). 
+   For visualization purposes make sure the code
    layer has two units. How many parameters are there to learn in this
    nonlinear model? How many parameters are there to learn in the
-   corresponding PCA linear model with rank=2?  Is the number of
-   parameters in the auto-encoder larger as expected?
+   corresponding PCA linear model with rank=2? 
+   (this is the number of entries in the first two columns of the rotation matrix, plus the number of entries in the mean vector)
+   Is the number of parameters in the auto-encoder larger as expected?
 
 2. Now learn the auto-encoder parameters using keras::compile (with
    keras::loss_mean_squared_error) and keras::fit. Use the predict
@@ -20,8 +22,11 @@ compare to the PCA linear mapping.
    rank=2 and compute its predicted values. What is the reconstruction
    error (mean squared error between data and predicted values) for
    the two methods? Is the auto-encoder more accurate as expected? (for full credit make sure that it is) If
-   not, try increasing the number epochs, and/or the learning rate (lr
+   not, try some of the following
+   - increasing the number epochs, and/or the learning rate (lr
    parameter of optimizer_sgd).
+   - use a different optimizer_* function. I got it to work with the default parameters of optimizer_adadelta().
+   - make sure the last activation is linear, and all other activations are non-linear (relu or sigmoid).
 
 3. Now use keras::keras_model, keras::get_layer, and predict functions
    to compute the low-dimensional embedding of the original train

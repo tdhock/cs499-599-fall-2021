@@ -19,7 +19,7 @@ compare to the PCA linear mapping.
    function to compute the predicted values. Also compute a PCA with
    rank=2 and compute its predicted values. What is the reconstruction
    error (mean squared error between data and predicted values) for
-   the two methods? Is the auto-encoder more accurate as expected? If
+   the two methods? Is the auto-encoder more accurate as expected? (for full credit make sure that it is) If
    not, try increasing the number epochs, and/or the learning rate (lr
    parameter of optimizer_sgd).
 

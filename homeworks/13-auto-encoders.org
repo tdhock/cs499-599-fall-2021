@@ -2,6 +2,8 @@ The goal of this homework is to use an auto-encoder to learn a low
 dimensional nonlinear mapping of a high dimensional data set, and
 compare to the PCA linear mapping.
 
+TODO modify to use torch (easier to install) instead of keras.
+
 1. first select 100 rows of the zip.train data from the ESL book (10
    from each class). Or you could use another digit data like the
    MNIST I used in my slides, but MNIST is larger so the zip data
@@ -23,8 +25,7 @@ compare to the PCA linear mapping.
    error (mean squared error between data and predicted values) for
    the two methods? Is the auto-encoder more accurate as expected? (for full credit make sure that it is) If
    not, try some of the following
-   - increasing the number epochs, and/or the learning rate (lr
-   parameter of optimizer_sgd).
+   - increasing the number epochs, and/or the learning rate (lr parameter of optimizer_sgd).
    - use a different optimizer_* function. I got it to work with the default parameters of optimizer_adadelta().
    - make sure the last activation is linear, and all other activations are non-linear (relu or sigmoid).
 

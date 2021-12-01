@@ -2,7 +2,7 @@ The goal of this homework is to use an auto-encoder to learn a low
 dimensional nonlinear mapping of a high dimensional data set, and
 compare to the PCA linear mapping.
 
-TODO modify to use torch (easier to install) instead of keras.
+TODO modify to use [[https://github.com/tdhock/cs499-599-fall-2021/blob/main/homeworks/13-auto-encoders-torch.R][torch]] (easier to install) instead of keras.
 
 1. first select 100 rows of the zip.train data from the ESL book (10
    from each class). Or you could use another digit data like the

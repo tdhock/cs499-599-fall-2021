@@ -67,7 +67,7 @@
 Rubric: minus points for incomplete and/or off-topic responses.
 
 Volunteers to present solutions for extra credit during reading week:
-- CS499, Weds Dec 1: 2-Hunter, 3-Georgia.
+- CS499, Weds Dec 1: Tayler, 2-Hunter, 3-Georgia, Austin, Sam.
 - CS599, Thurs Dec 2: Kyle, Hunor, Karl, Shadmaan.
 
 For the real final exam (in class at time shown below), what would be

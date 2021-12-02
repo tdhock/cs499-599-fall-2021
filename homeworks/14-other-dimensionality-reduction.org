@@ -15,8 +15,8 @@ algorithms.
    data table for plotting. Make a ggplot which shows the two
    embedding dimensions on the x/y axes, the different class/labels as
    different numbers (geom_text), and the different methods in
-   different panels (facet_grid). Which of the three methods appears
-   to separate the class labels the best, in your opinion?
+   different panels, facet_wrap(scales="free") so each has different x/y axis ranges. 
+   Which of the three methods appears to separate the class labels the best, in your opinion?
 
 3. Choose three different quality scores implemented in the dimRed R
    package. For each quality score and embedding method, compute the

@@ -81,8 +81,16 @@ material. But in general, copying code for your homework, from
 classmates or internet sources, is strictly forbidden and will be
 pursued as an academic integrity violation.
 
-[[https://docs.google.com/document/d/1W6-HdQLgHayOFXaQtscO5J5yf05G7E6KeXyiBJFcT7A/edit?usp=sharing][This General Usage Rubric]] will be used to grade the code
-quality/style/efficiency in each of your homeworks.
+Your content and responses to each homework question will be graded as
+follows
+- Full credit for figures which show correct results, along with code
+  which seems correct and is of high quality.
+- [[https://docs.google.com/document/d/1W6-HdQLgHayOFXaQtscO5J5yf05G7E6KeXyiBJFcT7A/edit?usp=sharing][This General Usage Rubric]] will be used to grade the code
+  quality/style/efficiency in each of your homeworks, -5 for each
+  violation of these good coding rules.
+- Some code and result figures, but clearly incorrect, -5 to -10.
+- Missing code or figure, -10 to -20.
+- Missing code and figure, -20 to -40.
 
 Homework topics and readings for each week are listed below. The date
 of the Monday of each week is written. Each homework is due Friday of

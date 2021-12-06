@@ -68,12 +68,12 @@ Rubric: minus points for incomplete and/or off-topic responses.
 
 Volunteers to present solutions for extra credit during reading week:
 - CS499, Weds Dec 1: Tayler, 2-Hunter, 3-Georgia, Austin, Sam.
-- CS599, Thurs Dec 2: Kyle, Hunor, Karl, Shadmaan.
+- CS599, Thurs Dec 2: Kyle, Hunor, Karl, Shadmaan, Fred.
 
 For the real final exam (in class at time shown below), what would be
 the analogous questions for the other topics that we have studied?
-- CS599 Thurs Dec 9, 8-9:30AM.
 - CS499 Mon Dec 6, 8-9:30AM.
+- CS599 Thurs Dec 9, 8-9:30AM.
  
 It will be open-note: during the real exam, you are allowed one sheet
 of paper, filled in with your own notes, in your own handwriting.

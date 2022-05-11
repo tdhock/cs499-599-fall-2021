@@ -51,6 +51,9 @@ Eddelbuettel.
 Impatient R by Burns
 - [[https://www.burns-stat.com/documents/tutorials/impatient-r/][web pages with practical R tutorials]].
 
+fasteR: Becoming productive in R, as fast as possible, by Norm Matloff
+- [[https://github.com/matloff/fasteR][github repo]].
+
 Introductions to data.table (efficient R package for data manipulation).
 - [[https://atrebas.github.io/post/2020-06-17-datatable-introduction/][A gentle introduction to data.table by Atrebas]].
 - Official [[https://cloud.r-project.org/web/packages/data.table/vignettes/datatable-intro.html][datatable-intro vignette]].

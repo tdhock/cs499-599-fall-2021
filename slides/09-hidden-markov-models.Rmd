@@ -162,6 +162,9 @@ gg+
 - Learning model parameters that maximize likelihood of a given data
   set => Baum-Welch algorithm.
   
+- Forward-backward sub-routine: computing the probability of being in
+  each state at each time point, given model parameters and data.
+  
 ---
 
 # Forward algorithm
@@ -176,6 +179,104 @@ gg+
   $\alpha_t(j) = \sum_{k=1}^K \alpha_{t-1}(k) a_{kj} b_j(o_t).$
 - Total log likelihood is summed over all states at the last data
   point in the sequence.
+  
+```{r}
+mean.vec <- c(-0.5, 0, 0.3)
+n.states <- length(mean.vec)
+log.pi.vec <- log(c(0.6, 0.2, 0.2))
+##log.pi.vec <- log(rep(1/n.states, n.states))
+y.vec <- chrom.dt[seq(1, .N, by=20), logratio]
+y.dt <- data.table(data.i=seq_along(y.vec), logratio=y.vec)
+diag.entry <- 0.6
+A.mat <- matrix((1-diag.entry)/2, n.states, n.states)
+diag(A.mat) <- diag.entry
+log.A.mat <- log(A.mat)
+##log.A.mat[i,j] is the log probability of going from state i
+##to state j.
+log.A.dt <- data.table(
+  from=as.integer(row(log.A.mat)),
+  to=as.integer(col(log.A.mat)),
+  log.prob=as.numeric(log.A.mat)
+)[, `:=`(data.i=to-1-n.states, state=(n.states-from)+1+n.states)]
+sd.param <- 0.2
+N.data <- length(y.vec)
+log.emission.mat <- dnorm(
+  y.vec, 
+  matrix(mean.vec, N.data, n.states, byrow=TRUE),
+  sd.param,
+  log=TRUE)
+log.emission.dt <- data.table(
+  data.i=as.integer(row(log.emission.mat)),
+  state=as.integer(col(log.emission.mat)),
+  log.prob=as.numeric(log.emission.mat))
+str(list(
+  mean=mean.vec,
+  sd=sd.param,
+  transition=exp(log.A.mat),
+  initial=exp(log.pi.vec)))
+fwd.list <- plotHMM::forward_interface(
+  log.emission.mat, log.A.mat, log.pi.vec)
+tile.dt <- with(fwd.list, data.table(
+  data.i=as.integer(row(log_alpha)),
+  state=as.integer(col(log_alpha)),
+  log.prob=as.numeric(log_alpha)))
+gg.fwd <- function(state.k, data.t){
+  some.tiles <- rbind(
+    log.A.dt[, .(data.i, state, log.prob)], 
+    tile.dt[
+    (state <= state.k & data.i == data.t) |
+    data.i < data.t, .(data.i, state, log.prob)])
+  seg.dt <- rbind(
+    log.A.dt[to==state.k, data.table(
+      data.prev=data.i,
+      data.t,
+      state.prev=state, 
+      state.k)],
+    data.table(
+      data.prev=data.t-1,
+      data.t,
+      state.prev=1:n.states,
+      state.k))
+  ypanel <- "probability"
+  ggplot()+
+    scale_x_continuous(
+      "Position/index in data sequence",
+      breaks=tile.dt$data.i)+
+    scale_y_continuous(
+      "")+
+    geom_point(aes(
+      data.i, logratio),
+      data=data.table(y.dt, ypanel="data values"))+
+    geom_tile(aes(
+      data.i, state, fill=log.prob),
+      color="black",
+      data=data.table(
+        some.tiles, 
+        ypanel))+
+    geom_segment(aes(
+      data.t, state.k,
+      xend=data.prev, yend=state.prev),
+      data=data.table(
+        seg.dt,
+        ypanel),
+      size=1,
+      color="grey")+
+    scale_fill_gradient(
+      low="white", high="red", 
+      limits=range(tile.dt$log.prob))+
+    facet_grid(ypanel ~ ., scales="free")
+}
+gg.fwd(2, 10)
+
+```
+  
+---
+
+# Back to full data, numerical underflow problem
+
+- When running the forward algorithm on large data (more than a few
+  hundred time points), the log probability gets very small at the end
+  of the sequence, which may result in numerical underflow.
 
 ```{r, fig.height=3.5}
 mean.vec <- c(0.25, 0, -0.5)
@@ -201,7 +302,7 @@ ggplot()+
   scale_x_continuous(
     "Position/index in data sequence")+
   scale_y_continuous(
-    "logratio")+
+    "")+
   geom_point(aes(
     data.i, logratio),
     data=data.table(chrom.dt, ypanel="data values"))+

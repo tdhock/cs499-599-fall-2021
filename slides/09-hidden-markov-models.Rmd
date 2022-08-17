@@ -147,7 +147,7 @@ gg+
 
 ---
 
-# Three problems and algorithms
+# Problems and algorithms
 
 ```{r}
 ## https://web.stanford.edu/~jurafsky/slp3/A.pdf
@@ -162,30 +162,37 @@ gg+
 - Learning model parameters that maximize likelihood of a given data
   set => Baum-Welch algorithm.
   
-- Forward-backward sub-routine: computing the probability of being in
+- Forward-backward sub-routine: computing the likelihood of being in
   each state at each time point, given model parameters and data.
+  
+- Notation: probability is a value between zero and one; likelihood is
+  not necessarily between zero and one; both can be used to measure
+  the goodness of fit of a model to data (larger is better).
   
 ---
 
 # Forward algorithm
 
-- Assume each state $k\in\{1,\dots,K\}$ has an emission probability
+- Assume each state $k\in\{1,\dots,K\}$ has an emission likelihood
   function $b_k(o_t)$ for observed data $o_t$ at time $t$.
 - Let $a_{kj}$ be a transition parameter (probability of going from
   state $k$ to state $j$).
 - Initialization: for all states $j\in\{1,\dots,K\}$, $\alpha_1(j) =
   \pi_j b_j(o_1)$.
-- Then we can recursively compute the forward path probability,
+- Then we can recursively compute the forward path likelihood,
   $\alpha_t(j) = \sum_{k=1}^K \alpha_{t-1}(k) a_{kj} b_j(o_t).$
 - Total log likelihood is summed over all states at the last data
   point in the sequence.
   
-```{r}
-mean.vec <- c(-0.5, 0, 0.3)
+```{r, fig.height=3.5}
+mean.vec <- c(0.3, 0, -0.5)
 n.states <- length(mean.vec)
-log.pi.vec <- log(c(0.6, 0.2, 0.2))
+log.pi.vec <- log(c(0.3, 0.3, 0.4))
 log.pi.dt <- data.table(
-  data.i=-1, state=seq_along(log.pi.vec), log.prob=log.pi.vec)
+  data.i=-1,
+  state.id=seq(1, n.states),
+  state=seq(n.states, 1),
+  log.prob=log.pi.vec)
 y.vec <- chrom.dt[seq(1, .N, by=20), logratio]
 y.dt <- data.table(data.i=seq_along(y.vec), logratio=y.vec)
 diag.entry <- 0.6
@@ -202,7 +209,7 @@ log.A.dt <- data.table(
   to=as.integer(col(log.A.mat)),
   log.prob=as.numeric(log.A.mat)
 )[, `:=`(data.i=to-1-n.states, state=state.y(from))]
-sd.param <- 0.2
+sd.param <- 0.1
 N.data <- length(y.vec)
 log.emission.mat <- dnorm(
   y.vec, 
@@ -223,77 +230,236 @@ fwd.list <- plotHMM::forward_interface(
   log.emission.mat, log.A.mat, log.pi.vec)
 tile.dt <- with(fwd.list, data.table(
   data.i=as.integer(row(log_alpha)),
-  state=as.integer(col(log_alpha)),
-  log.prob=as.numeric(log_alpha)))
+  state.id=as.integer(col(log_alpha)),
+  log.prob=as.numeric(log_alpha)
+)[, state := n.states-state.id+1])
+ypanel <- "Forward\nalgorithm"
+lab <- function(data.i, state, label, hjust, yp=ypanel){
+  data.table(data.i, state, label, hjust, ypanel=yp)
+}
+text.dt <- rbind(
+  lab(-1, 4, "Prior param.", 1),
+  lab(-2, 8, "Transition param.", 0.5),
+  lab(1, 4, "Forward lik.", 0),
+  lab(1, 8, "Emission lik.", 0),
+  lab(0, c(1:3, 5:7), 3:1, 0.5),
+  lab(0, 8, "State", 0.5),
+  lab(0, -0.25, sprintf("Emission parameters\nSD=%.1f",sd.param), 1, "data values"))
+mean.dt <- data.table(
+  state.id=seq_along(mean.vec),
+  mean=mean.vec)
 gg.fwd <- function(state.k, data.t){
   some.tiles <- rbind(
     log.pi.dt[, .(data.i, state, log.prob)],
     log.emission.dt[, .(data.i, state, log.prob)],
     log.A.dt[, .(data.i, state, log.prob)], 
     tile.dt[
-    (state <= state.k & data.i == data.t) |
-    data.i < data.t, .(data.i, state, log.prob)])
+    (state.id <= state.k & data.i == data.t) |
+      data.i < data.t, .(data.i, state, log.prob)])
+  state.t <- n.states-state.k+1
   seg.dt <- rbind(
-    log.emission.dt[data.i==data.t, data.table(
-      data.prev=data.i+0.3*c(-1,0,1),
+    data.table(),
+    if(data.t==1)log.emission.dt[
+      data.i==data.t & state.id == state.k, data.table(
+        data.prev=data.i+0.3,
+        data.t,
+        state.prev=state,
+        state.t)]
+    else if(data.t<=length(y.vec))log.emission.dt[
+      data.i==data.t, data.table(
+        data.prev=data.i+0.3*seq(-1, 1, l=n.states),
+        data.t,
+        state.prev=state,
+        state.t)],
+    if(data.t==1)log.pi.dt[state.id==state.k, data.table(
+      data.prev=data.i+0.3,
       data.t,
       state.prev=state,
-      state.k)],
-    if(data.t>1)log.A.dt[to==state.k, data.table(
-      data.prev=data.i,
+      state.t)]
+    else if(data.t<=length(y.vec))log.A.dt[to==state.k, data.table(
+      data.prev=data.i+0.3,
       data.t,
       state.prev=state, 
-      state.k)]
-    else log.pi.dt[, data.table(
-      data.prev=data.i,
-      data.t,
-      state.prev=state,
-      state.k)],
-    if(data.t>1)data.table(
+      state.t)],
+    if(data.t>1 && data.t <= length(y.vec))data.table(
       data.prev=data.t-1,
       data.t,
       state.prev=1:n.states,
-      state.k))
-  ypanel <- "probability"
-  ggplot()+
+      state.t))
+  gg <- ggplot()+
     scale_x_continuous(
       "Position/index in data sequence",
       breaks=tile.dt$data.i)+
     scale_y_continuous(
-      "")+
+      "",
+      breaks=function(limits){
+        if(limits[2]<1)seq(-1, 1, by=0.25)
+      })+
     geom_point(aes(
       data.i, logratio),
       data=data.table(y.dt, ypanel="data values"))+
+    geom_rect(aes(
+      xmin=-Inf, xmax=Inf,
+      ymin=mean-sd.param, ymax=mean+sd.param),
+      alpha=0.5,
+      data=data.table(mean.dt, ypanel="data values"))+
+    geom_label(aes(
+      0, mean, label=sprintf("mean %d=%.1f", state.id, mean)),
+      hjust=1,
+      data=data.table(mean.dt, ypanel="data values"))+
     geom_tile(aes(
       data.i, state, fill=log.prob),
       color="black",
       data=data.table(
         some.tiles, 
         ypanel))+
-    geom_segment(aes(
-      data.t, state.k,
+    geom_text(aes(
+      data.i, state, label=sprintf("%.2f", exp(log.prob))),
+      color="black",
+      data=data.table(
+        some.tiles, 
+        ypanel))+
+    geom_text(aes(
+      data.i, state, label=label, hjust=hjust),
+      data=text.dt)+
+    scale_fill_gradient(
+      low="white", high="red", 
+      limits=range(tile.dt$log.prob, log.emission.mat))+
+    facet_grid(ypanel ~ ., scales="free")
+  if(nrow(seg.dt)){
+    gg <- gg+geom_segment(aes(
+      data.t, state.t+0.3,
       xend=data.prev, yend=state.prev),
       data=data.table(
         seg.dt,
         ypanel),
       size=1,
-      color="grey")+
-    scale_fill_gradient(
-      low="white", high="red", 
-      limits=range(tile.dt$log.prob, log.emission.mat))+
-    facet_grid(ypanel ~ ., scales="free")
+      color="grey")
+  }
+  gg
 }
-gg.fwd(2, 1)
+gg.fwd(3, 13)
 
 ```
 
 ---
 
-# Later in forward algo
+# Forward algo demo
+
+```{r forward-begin}
+gg.fwd(1, 1)
+```
+
+---
+
+# Forward algo demo
 
 ```{r}
-gg.fwd(2, 10)
+gg.fwd(2, 1)
+```
 
+---
+
+# Forward algo demo
+
+```{r}
+gg.fwd(3, 1)
+```
+
+---
+
+# Forward algo demo
+
+```{r}
+gg.fwd(1, 2)
+```
+
+---
+
+# Forward algo demo
+
+```{r}
+gg.fwd(2, 2)
+```
+
+---
+
+# Forward algo demo
+
+```{r}
+gg.fwd(3, 2)
+```
+
+---
+
+# Forward algo demo
+
+```{r}
+gg.fwd(1, 3)
+```
+
+---
+
+# Forward algo demo
+
+```{r}
+gg.fwd(2, 3)
+```
+
+---
+
+# Forward algo demo
+
+```{r}
+gg.fwd(3, 3)
+```
+
+---
+
+# Forward algo demo
+
+```{r}
+gg.fwd(1, 11)
+```
+
+---
+
+# Forward algo demo
+
+```{r}
+gg.fwd(2, 11)
+```
+
+---
+
+# Forward algo demo
+
+```{r}
+gg.fwd(3, 11)
+```
+
+---
+
+# Forward algo demo
+
+```{r}
+gg.fwd(1, 12)
+```
+
+---
+
+# Forward algo demo
+
+```{r}
+gg.fwd(2, 12)
+```
+
+---
+
+# Forward algo demo
+
+```{r forward-end}
+gg.fwd(3, 12)
 ```
   
 ---
@@ -301,7 +467,7 @@ gg.fwd(2, 10)
 # Back to full data, numerical underflow problem
 
 - When running the forward algorithm on large data (more than a few
-  hundred time points), the log probability gets very small at the end
+  hundred time points), the log likelihood gets very small at the end
   of the sequence, which may result in numerical underflow.
 
 ```{r, fig.height=3.5}
@@ -335,7 +501,7 @@ ggplot()+
   geom_tile(aes(
     data.i, state, fill=log.prob),
     color="black",
-    data=data.table(tile.dt, ypanel="forward\nprobability"))+
+    data=data.table(tile.dt, ypanel="forward\nlikelihood"))+
   scale_fill_gradient(low="white", high="red")+
   facet_grid(ypanel ~ ., scales="free")
 
@@ -637,7 +803,7 @@ viterbi.forward(3, 2)
 
 # Viterbi forward pass
 
-```{r}
+```{r viterbi-forward}
 viterbi.forward(3, 3)
 ```
 
@@ -741,7 +907,7 @@ viterbi.back(4)
 
 # Viterbi backtracking
 
-```{r}
+```{r viterbi-backtracking}
 viterbi.back(3)
 ```
 

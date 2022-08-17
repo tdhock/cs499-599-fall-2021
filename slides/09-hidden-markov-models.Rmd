@@ -303,8 +303,11 @@ gg.fwd <- function(state.k, data.t){
       ymin=mean-sd.param, ymax=mean+sd.param),
       alpha=0.5,
       data=data.table(mean.dt, ypanel="data values"))+
+    geom_hline(aes(
+      yintercept=mean),
+      data=data.table(mean.dt, ypanel="data values"))+
     geom_label(aes(
-      0, mean, label=sprintf("mean %d=%.1f", state.id, mean)),
+      0, mean, label=sprintf("mean %d = %.1f", state.id, mean)),
       hjust=1,
       data=data.table(mean.dt, ypanel="data values"))+
     geom_tile(aes(

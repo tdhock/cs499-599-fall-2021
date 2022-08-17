@@ -184,7 +184,8 @@ gg+
 mean.vec <- c(-0.5, 0, 0.3)
 n.states <- length(mean.vec)
 log.pi.vec <- log(c(0.6, 0.2, 0.2))
-##log.pi.vec <- log(rep(1/n.states, n.states))
+log.pi.dt <- data.table(
+  data.i=-1, state=seq_along(log.pi.vec), log.prob=log.pi.vec)
 y.vec <- chrom.dt[seq(1, .N, by=20), logratio]
 y.dt <- data.table(data.i=seq_along(y.vec), logratio=y.vec)
 diag.entry <- 0.6
@@ -193,11 +194,14 @@ diag(A.mat) <- diag.entry
 log.A.mat <- log(A.mat)
 ##log.A.mat[i,j] is the log probability of going from state i
 ##to state j.
+state.y <- function(state.id){
+  (n.states-state.id)+2+n.states
+}
 log.A.dt <- data.table(
   from=as.integer(row(log.A.mat)),
   to=as.integer(col(log.A.mat)),
   log.prob=as.numeric(log.A.mat)
-)[, `:=`(data.i=to-1-n.states, state=(n.states-from)+1+n.states)]
+)[, `:=`(data.i=to-1-n.states, state=state.y(from))]
 sd.param <- 0.2
 N.data <- length(y.vec)
 log.emission.mat <- dnorm(
@@ -207,8 +211,9 @@ log.emission.mat <- dnorm(
   log=TRUE)
 log.emission.dt <- data.table(
   data.i=as.integer(row(log.emission.mat)),
-  state=as.integer(col(log.emission.mat)),
-  log.prob=as.numeric(log.emission.mat))
+  state.id=as.integer(col(log.emission.mat)),
+  log.prob=as.numeric(log.emission.mat)
+)[, `:=`(state=state.y(state.id))]
 str(list(
   mean=mean.vec,
   sd=sd.param,
@@ -222,17 +227,29 @@ tile.dt <- with(fwd.list, data.table(
   log.prob=as.numeric(log_alpha)))
 gg.fwd <- function(state.k, data.t){
   some.tiles <- rbind(
+    log.pi.dt[, .(data.i, state, log.prob)],
+    log.emission.dt[, .(data.i, state, log.prob)],
     log.A.dt[, .(data.i, state, log.prob)], 
     tile.dt[
     (state <= state.k & data.i == data.t) |
     data.i < data.t, .(data.i, state, log.prob)])
   seg.dt <- rbind(
-    log.A.dt[to==state.k, data.table(
+    log.emission.dt[data.i==data.t, data.table(
+      data.prev=data.i+0.3*c(-1,0,1),
+      data.t,
+      state.prev=state,
+      state.k)],
+    if(data.t>1)log.A.dt[to==state.k, data.table(
       data.prev=data.i,
       data.t,
       state.prev=state, 
+      state.k)]
+    else log.pi.dt[, data.table(
+      data.prev=data.i,
+      data.t,
+      state.prev=state,
       state.k)],
-    data.table(
+    if(data.t>1)data.table(
       data.prev=data.t-1,
       data.t,
       state.prev=1:n.states,
@@ -263,9 +280,18 @@ gg.fwd <- function(state.k, data.t){
       color="grey")+
     scale_fill_gradient(
       low="white", high="red", 
-      limits=range(tile.dt$log.prob))+
+      limits=range(tile.dt$log.prob, log.emission.mat))+
     facet_grid(ypanel ~ ., scales="free")
 }
+gg.fwd(2, 1)
+
+```
+
+---
+
+# Later in forward algo
+
+```{r}
 gg.fwd(2, 10)
 
 ```

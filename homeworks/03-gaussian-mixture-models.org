@@ -90,3 +90,6 @@ textbooks.
   }
 #+END_SRC
 
+Extra credit: code an accelerated version of EM, as described in the
+[[https://cloud.r-project.org/web/packages/turboEM/vignettes/turboEM.pdf][turboEM package vignette]].
+
